@@ -1,8 +1,8 @@
 # Swarnavo Sen Portfolio
 
-An interactive, single-page portfolio with a 3D hero, project filters, responsive sections, theme switching, and editable content.
+An interactive, single-page portfolio with a cinematic 3D command-station hero, project filters, GitHub orbit, animated case-study cards, responsive sections, theme switching, and editable content.
 
-The project section is based on the public repositories from `https://github.com/swarnavosen10-byte`.
+The project section is based on the showcase repositories from `https://github.com/swarnavosen10-byte`. The deployment repository for this site is intentionally excluded from the portfolio gallery.
 
 ## Open It
 

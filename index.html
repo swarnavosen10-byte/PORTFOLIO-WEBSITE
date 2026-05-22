@@ -7,6 +7,10 @@
       name="description"
       content="Swarnavo Sen's interactive portfolio: healthcare systems, KYC APIs, Python, OpenCV, DSA, and full-stack project work."
     />
+    <meta name="keywords" content="Swarnavo Sen, portfolio, developer, Python, FastAPI, React, OpenCV, DSA, healthcare, 3D website" />
+    <meta property="og:title" content="Swarnavo Sen | Interactive Portfolio" />
+    <meta property="og:description" content="A cinematic 3D portfolio with interactive project showcases, motion-rich UI, and case-study style sections." />
+    <meta property="og:type" content="website" />
     <meta name="theme-color" content="#f7f3ea" />
     <title>Swarnavo Sen | Interactive Portfolio</title>
     <link rel="preconnect" href="https://unpkg.com" />
@@ -16,13 +20,24 @@
   <body>
     <a class="skip-link" href="#work">Skip to work</a>
 
+    <div id="preloader" class="preloader" aria-hidden="false">
+      <div class="preloader-inner">
+        <svg width="56" height="56" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="12" r="10" stroke="#f45f43" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.18"></circle>
+          <path d="M12 2a10 10 0 0 1 0 20" stroke="#fff8ea" stroke-width="2" stroke-linecap="round"></path>
+        </svg>
+      </div>
+    </div>
+
     <header class="site-header" aria-label="Primary navigation">
+      <div class="scroll-progress" aria-hidden="true"><span data-scroll-progress></span></div>
       <a class="brand" href="#top" aria-label="Swarnavo home">
         <span class="brand-mark" aria-hidden="true"></span>
         <span>Swarnavo Sen</span>
       </a>
       <nav class="nav-links" aria-label="Portfolio sections">
         <a href="#work">Work</a>
+        <a href="#github">GitHub</a>
         <a href="#range">Range</a>
         <a href="#process">Process</a>
         <a href="#contact">Contact</a>
@@ -45,9 +60,23 @@
           <p class="hero-copy" data-role>
             Creative engineer building AI-native products, cinematic interfaces, and reliable full-stack systems.
           </p>
+          <div class="hero-badges" data-hero-badges></div>
           <div class="hero-actions" aria-label="Primary actions">
             <a class="button primary" href="#work">View work</a>
+            <a class="button secondary" data-github-link href="https://github.com/swarnavosen10-byte" target="_blank" rel="noreferrer">GitHub profile</a>
             <a class="button secondary" href="#contact">Start a project</a>
+          </div>
+          <div class="hero-cockpit" aria-label="Live portfolio console">
+            <div class="cockpit-line">
+              <span>BUILD MODE</span>
+              <strong>Shock-ready portfolio system</strong>
+            </div>
+            <div class="cockpit-grid">
+              <span>3D workstation</span>
+              <span>Repo orbit</span>
+              <span>Case files</span>
+              <span>Motion UI</span>
+            </div>
           </div>
         </div>
 
@@ -64,6 +93,29 @@
             This site is ready for your real case studies, metrics, writing, and contact channels. The structure is
             intentionally premium, fast, and editable.
           </p>
+        </div>
+        <div class="stats-grid" data-stats></div>
+      </section>
+
+      <section class="marquee-band" aria-label="Capabilities marquee">
+        <div class="marquee-track" data-marquee></div>
+      </section>
+
+      <section class="section github-section" id="github" aria-labelledby="github-title">
+        <div class="section-shell github-layout">
+          <div>
+            <p class="eyebrow">GitHub Universe</p>
+            <h2 id="github-title">Every public repo, mapped into one launch console.</h2>
+            <p class="section-copy" data-github-copy>
+              Four showcase repositories from Swarnavo's GitHub profile, shaped into project cards with live links,
+              stack signals, and visual identity.
+            </p>
+            <div class="github-actions">
+              <a class="button primary" data-github-link href="https://github.com/swarnavosen10-byte" target="_blank" rel="noreferrer">Open GitHub</a>
+              <a class="button text-link" href="#work">Explore projects</a>
+            </div>
+          </div>
+          <div class="repo-orbit" data-repo-orbit aria-label="Public repositories"></div>
         </div>
       </section>
 
@@ -133,7 +185,11 @@
     <!-- Project modal -->
     <div id="project-modal" class="project-modal" role="dialog" aria-hidden="true" aria-labelledby="project-modal-title">
       <div class="project-modal-shell">
-        <button class="modal-close" aria-label="Close project details">×</button>
+        <button class="modal-close" aria-label="Close project details">&times;</button>
+        <div class="modal-controls">
+          <button class="modal-prev" aria-label="Previous project">&lsaquo;</button>
+          <button class="modal-next" aria-label="Next project">&rsaquo;</button>
+        </div>
         <div class="project-modal-content">
           <h3 id="project-modal-title"></h3>
           <div class="project-modal-body">

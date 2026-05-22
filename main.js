@@ -1,12 +1,15 @@
 const portfolio = {
   name: "Swarnavo Sen",
   heroKicker: "Portfolio 2026",
+  githubProfile: "https://github.com/swarnavosen10-byte",
   role: "CSE student, Python developer, OpenCV learner, and builder of practical healthcare, identity, and sustainability projects.",
   intro:
-    "This portfolio now reflects the public projects from my GitHub profile: hospital resource coordination, KYC verification, blockchain-backed APIs, and early-stage sustainability work.",
+    "This portfolio reflects the real showcase projects from my GitHub profile: hospital resource coordination, KYC verification, blockchain-backed APIs, and early-stage sustainability work.",
+  githubCopy:
+    "GitHub profile verified on May 22, 2026. This portfolio highlights 4 showcase repositories from the profile, with the site repository kept out of the project gallery.",
   email: "swarnavosen10@gmail.com",
   location: "India",
-  status: "Currently building MEDISYNC and strengthening Python, DSA, OpenCV, Java, C++, and VHDL.",
+  status: "Currently building MEDISYNC, this 3D portfolio, and stronger foundations in Python, DSA, OpenCV, Java, C++, and VHDL.",
   highlights: [
     {
       title: "Healthcare systems",
@@ -21,6 +24,14 @@ const portfolio = {
       detail: "A growing GitHub profile focused on Python, DSA, OpenCV, and real-world project building."
     }
   ],
+  badges: ["3D command station", "Showcase repos", "Motion-rich UI"],
+  stats: [
+    { value: "3D", label: "interactive hero" },
+    { value: "4", label: "showcase repos" },
+    { value: "100%", label: "static deployable" },
+    { value: "2026", label: "fresh project push" }
+  ],
+  marquee: ["Three.js", "Showcase repos", "Parallax", "Motion design", "Project modal", "Cursor trail", "Responsive", "Deployable"],
   projects: [
     {
       title: "MediSync Hospital Management",
@@ -125,6 +136,13 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 const root = document.documentElement;
 const savedTheme = localStorage.getItem("portfolio-theme");
 
+const preloader = document.getElementById("preloader");
+
+function hidePreloader() {
+  if (!preloader) return;
+  preloader.setAttribute("aria-hidden", "true");
+}
+
 if (savedTheme === "night") {
   root.dataset.theme = "night";
 }
@@ -135,6 +153,8 @@ function renderContent() {
   $("[data-role]").textContent = portfolio.role;
   $("[data-intro]").textContent = portfolio.intro;
   $("[data-range-copy]").textContent = portfolio.rangeCopy;
+  const githubCopy = $("[data-github-copy]");
+  if (githubCopy) githubCopy.textContent = portfolio.githubCopy;
   $("[data-status]").textContent = portfolio.status;
   $("[data-footer-name]").textContent = portfolio.name;
   $("[data-footer-meta]").textContent = portfolio.location;
@@ -142,6 +162,10 @@ function renderContent() {
   const emailLink = $("[data-email-link]");
   emailLink.href = `mailto:${portfolio.email}`;
   emailLink.textContent = portfolio.email;
+
+  $$("[data-github-link]").forEach((link) => {
+    link.href = portfolio.githubProfile;
+  });
 
   const highlights = $("[data-highlights]");
   highlights.innerHTML = portfolio.highlights
@@ -155,8 +179,34 @@ function renderContent() {
     )
     .join("");
 
+  const heroBadges = $("[data-hero-badges]");
+  if (heroBadges) {
+    heroBadges.innerHTML = portfolio.badges.map((badge) => `<span>${badge}</span>`).join("");
+  }
+
+  const stats = $("[data-stats]");
+  if (stats) {
+    stats.innerHTML = portfolio.stats
+      .map(
+        (item, index) => `
+          <article class="stat-card" style="--delay:${index * 0.12}s">
+            <strong>${item.value}</strong>
+            <span>${item.label}</span>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  const marquee = $("[data-marquee]");
+  if (marquee) {
+    const loop = [...portfolio.marquee, ...portfolio.marquee].map((item) => `<span>${item}</span>`).join("");
+    marquee.innerHTML = loop;
+  }
+
   renderFilters();
   renderProjects("All");
+  renderRepoOrbit();
   renderRange();
   renderProcess();
 }
@@ -190,19 +240,13 @@ function renderProjects(filter) {
   const projects = filter === "All" ? portfolio.projects : portfolio.projects.filter((project) => project.category === filter);
   const projectGrid = $("[data-projects]");
 
-    function slugify(text) {
-      return String(text)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "");
-    }
-
     projectGrid.innerHTML = projects
       .map((project) => {
-        const imgSrc = `screenshots/${slugify(project.title)}.svg`;
+        const imgSrc = `screenshots/${getProjectArtworkSlug(project)}.svg`;
         return `
           <article class="project-card ${project.featured ? "featured" : ""}">
             <div class="project-body">
+              <div class="project-number">${String(portfolio.projects.indexOf(project) + 1).padStart(2, "0")}</div>
               <div class="project-meta">
                 <span>${project.category}</span>
                 <span>${project.year}</span>
@@ -220,12 +264,53 @@ function renderProjects(filter) {
             </div>
             <div class="project-art" aria-hidden="true">
               <img src="${imgSrc}" alt="${project.title} screenshot" loading="lazy" onerror="this.style.display='none'" />
+              <div class="project-scan">
+                <span>${project.category}</span>
+                <span>${project.tags.slice(0, 2).join(" + ")}</span>
+              </div>
             </div>
           </article>
         `;
       })
       .join("");
   }
+
+function slugify(text) {
+  return String(text)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getProjectArtworkSlug(project) {
+  const aliases = {
+    "MediSync Hospital Management": "medisync"
+  };
+  return aliases[project.title] || slugify(project.title);
+}
+
+function renderRepoOrbit() {
+  const orbit = $("[data-repo-orbit]");
+  if (!orbit) return;
+
+  orbit.innerHTML = portfolio.projects
+    .map(
+      (project, index) => `
+        <a
+          class="repo-node"
+          href="${project.repoUrl || portfolio.githubProfile}"
+          target="_blank"
+          rel="noreferrer"
+          style="--index:${index}; --total:${portfolio.projects.length}"
+        >
+          <span>${String(index + 1).padStart(2, "0")}</span>
+          <strong>${project.title}</strong>
+          <em>${project.tags.slice(0, 3).join(" / ")}</em>
+        </a>
+      `
+    )
+    .join("");
+}
 
 function renderRange() {
   $("[data-range]").innerHTML = portfolio.range
@@ -288,6 +373,17 @@ function bindInteractions() {
     },
     { passive: true }
   );
+
+  const progress = $(`[data-scroll-progress]`);
+  window.addEventListener(
+    "scroll",
+    () => {
+      const max = Math.max(1, document.body.scrollHeight - window.innerHeight);
+      const percent = Math.min(1, window.scrollY / max);
+      if (progress) progress.style.transform = `scaleX(${percent})`;
+    },
+    { passive: true }
+  );
 }
 
 function setStageStatus(status) {
@@ -317,16 +413,22 @@ async function startVisualStage() {
   setStageStatus({ engine: "loading", frame: 0, active: false });
 
   try {
-    const THREE = await withTimeout(import("https://unpkg.com/three@0.165.0/build/three.module.js"), 1800);
-      // give a slightly longer time for slower networks
-      // (we'll retry with a longer timeout path below if needed)
-    createThreeStage(THREE, canvas);
+    // try a quick import first, then retry with a longer timeout if needed
+    let THREE;
+    try {
+      THREE = await withTimeout(import("https://unpkg.com/three@0.165.0/build/three.module.js"), 1800);
+    } catch (err) {
+      THREE = await withTimeout(import("https://unpkg.com/three@0.165.0/build/three.module.js"), 6000);
+    }
+    await createThreeStage(THREE, canvas);
+    hidePreloader();
   } catch (error) {
     // If Three.js fails to load, show the fallback canvas visual.
     fallback.classList.add("is-active");
     canvas = replaceStageCanvas(canvas);
     setStageStatus({ engine: "canvas-fallback", error: String(error).slice(0, 140) });
     createCanvasFallback(canvas);
+    hidePreloader();
   }
 }
 
@@ -343,6 +445,108 @@ function replaceStageCanvas(canvas) {
   const replacement = canvas.cloneNode(false);
   canvas.replaceWith(replacement);
   return replacement;
+}
+
+function createScreenTexture(THREE) {
+  const textureCanvas = document.createElement("canvas");
+  textureCanvas.width = 1024;
+  textureCanvas.height = 560;
+  const ctx = textureCanvas.getContext("2d");
+
+  const gradient = ctx.createLinearGradient(0, 0, textureCanvas.width, textureCanvas.height);
+  gradient.addColorStop(0, "#11100d");
+  gradient.addColorStop(0.48, "#162132");
+  gradient.addColorStop(1, "#0d0f0f");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+
+  ctx.strokeStyle = "rgba(255,248,234,0.08)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < textureCanvas.width; x += 56) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, textureCanvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < textureCanvas.height; y += 56) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(textureCanvas.width, y);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = "#f45f43";
+  ctx.font = "700 30px Inter, Arial, sans-serif";
+  ctx.fillText("SWARNAVO.OS", 56, 72);
+  ctx.fillStyle = "rgba(255,248,234,0.9)";
+  ctx.font = "800 64px Inter, Arial, sans-serif";
+  ctx.fillText("PROJECT", 56, 164);
+  ctx.fillText("COMMAND", 56, 232);
+
+  const rows = ["MediSync hospital map online", "KYC verification API armed", "OpenCV learning pipeline", "GitHub profile synced"];
+  rows.forEach((row, index) => {
+    const y = 320 + index * 44;
+    ctx.fillStyle = index % 2 ? "#69aef4" : "#57caa8";
+    ctx.fillRect(56, y - 18, 14, 14);
+    ctx.fillStyle = "rgba(255,248,234,0.78)";
+    ctx.font = "600 25px Inter, Arial, sans-serif";
+    ctx.fillText(row, 88, y);
+  });
+
+  ctx.strokeStyle = "#f45f43";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(760, 58, 178, 178);
+  ctx.strokeStyle = "#69aef4";
+  ctx.beginPath();
+  ctx.arc(849, 147, 58, 0.2, Math.PI * 1.66);
+  ctx.stroke();
+
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function createPanelTexture(THREE, project, index) {
+  const textureCanvas = document.createElement("canvas");
+  textureCanvas.width = 640;
+  textureCanvas.height = 360;
+  const ctx = textureCanvas.getContext("2d");
+  const accent = index % 2 ? "#1b78d8" : "#f45f43";
+
+  ctx.fillStyle = "rgba(13,15,15,0.92)";
+  ctx.fillRect(0, 0, textureCanvas.width, textureCanvas.height);
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 6;
+  ctx.strokeRect(18, 18, textureCanvas.width - 36, textureCanvas.height - 36);
+  ctx.fillStyle = accent;
+  ctx.font = "800 28px Inter, Arial, sans-serif";
+  ctx.fillText(String(index + 1).padStart(2, "0") + " / " + project.category.toUpperCase(), 42, 72);
+  ctx.fillStyle = "#fff8ea";
+  ctx.font = "800 46px Inter, Arial, sans-serif";
+  wrapCanvasText(ctx, project.title, 42, 145, 520, 52);
+  ctx.fillStyle = "rgba(255,248,234,0.72)";
+  ctx.font = "600 24px Inter, Arial, sans-serif";
+  ctx.fillText(project.tags.slice(0, 3).join("  +  "), 42, 302);
+
+  const texture = new THREE.CanvasTexture(textureCanvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(" ");
+  let line = "";
+  words.forEach((word) => {
+    const testLine = line ? `${line} ${word}` : word;
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = word;
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  });
+  ctx.fillText(line, x, y);
 }
 
 function createThreeStage(THREE, canvas) {
@@ -447,6 +651,124 @@ function createThreeStage(THREE, canvas) {
   torus.position.set(2.8, -0.45, -1.2);
   group.add(torus);
 
+  const station = new THREE.Group();
+  station.position.set(2.35, -1.25, 0);
+  station.rotation.y = -0.24;
+  group.add(station);
+
+  const matte = new THREE.MeshStandardMaterial({ color: 0x171512, roughness: 0.72, metalness: 0.18 });
+  const graphite = new THREE.MeshStandardMaterial({ color: 0x242018, roughness: 0.58, metalness: 0.34 });
+  const edgeGlow = new THREE.MeshStandardMaterial({
+    color: 0xf45f43,
+    emissive: 0xf45f43,
+    emissiveIntensity: 0.72,
+    roughness: 0.2,
+    metalness: 0.2
+  });
+  const blueGlow = new THREE.MeshStandardMaterial({
+    color: 0x1b78d8,
+    emissive: 0x1b78d8,
+    emissiveIntensity: 0.82,
+    roughness: 0.2,
+    metalness: 0.15
+  });
+
+  const screenTexture = createScreenTexture(THREE);
+  const screenMaterial = new THREE.MeshStandardMaterial({
+    map: screenTexture,
+    emissive: 0xffffff,
+    emissiveMap: screenTexture,
+    emissiveIntensity: 0.88,
+    roughness: 0.18,
+    metalness: 0.05
+  });
+
+  const desk = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.18, 2.1), graphite);
+  desk.position.set(0, -1.25, 0);
+  station.add(desk);
+
+  const monitorFrame = new THREE.Mesh(new THREE.BoxGeometry(3.25, 1.95, 0.18), matte);
+  monitorFrame.position.set(0, 0.1, -0.18);
+  station.add(monitorFrame);
+
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.92, 1.58), screenMaterial);
+  screen.position.set(0, 0.1, -0.075);
+  station.add(screen);
+
+  const screenRimTop = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.035, 0.04), edgeGlow);
+  screenRimTop.position.set(0, 0.99, -0.04);
+  station.add(screenRimTop);
+  const screenRimSide = new THREE.Mesh(new THREE.BoxGeometry(0.035, 1.78, 0.04), blueGlow);
+  screenRimSide.position.set(1.61, 0.08, -0.035);
+  station.add(screenRimSide);
+
+  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.76, 0.18), graphite);
+  stand.position.set(0, -0.84, -0.18);
+  station.add(stand);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.08, 0.72), graphite);
+  base.position.set(0, -1.18, 0.12);
+  station.add(base);
+
+  const keyboard = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.08, 0.48), matte);
+  keyboard.position.set(-0.6, -1.07, 0.86);
+  keyboard.rotation.x = -0.18;
+  station.add(keyboard);
+
+  const keyMeshes = [];
+  for (let row = 0; row < 3; row += 1) {
+    for (let col = 0; col < 10; col += 1) {
+      const keyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.07), col % 4 === 0 ? edgeGlow : blueGlow);
+      keyMesh.position.set(-1.38 + col * 0.16 + row * 0.035, -1.0, 0.72 + row * 0.11);
+      keyMesh.rotation.x = -0.18;
+      keyMesh.userData.phase = row * 0.7 + col * 0.18;
+      keyMeshes.push(keyMesh);
+      station.add(keyMesh);
+    }
+  }
+
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(0.74, 1.64, 0.92), matte);
+  tower.position.set(2.28, -0.48, 0.16);
+  station.add(tower);
+  const towerLight = new THREE.Mesh(new THREE.BoxGeometry(0.045, 1.2, 0.035), blueGlow);
+  towerLight.position.set(1.89, -0.48, 0.64);
+  station.add(towerLight);
+
+  const projectPanels = portfolio.projects.map((project, index) => {
+    const panelGroup = new THREE.Group();
+    const texture = createPanelTexture(THREE, project, index);
+    const material = new THREE.MeshStandardMaterial({
+      map: texture,
+      emissive: 0xffffff,
+      emissiveMap: texture,
+      emissiveIntensity: 0.52,
+      transparent: true,
+      opacity: 0.92,
+      roughness: 0.22,
+      metalness: 0.05
+    });
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.78), material);
+    const ring = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.44, 0.86),
+      new THREE.MeshBasicMaterial({ color: index % 2 ? 0x1b78d8 : 0xf45f43, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+    );
+    ring.position.z = -0.01;
+    panelGroup.add(ring);
+    panelGroup.add(panel);
+    panelGroup.position.set(-2.35 + index * 1.58, 1.6 + Math.sin(index) * 0.24, -0.25 - index * 0.2);
+    panelGroup.rotation.y = 0.28 - index * 0.16;
+    panelGroup.userData.phase = index * 0.8;
+    station.add(panelGroup);
+    return panelGroup;
+  });
+
+  const hologram = new THREE.Mesh(
+    new THREE.TorusGeometry(0.74, 0.01, 12, 90),
+    new THREE.MeshBasicMaterial({ color: 0x57caa8, transparent: true, opacity: 0.6 })
+  );
+  hologram.position.set(1.26, -0.88, 0.82);
+  hologram.rotation.x = Math.PI / 2;
+  station.add(hologram);
+
   // enable click pulse behavior for nodes
   try {
     addNodeClickPulse(THREE, group);
@@ -512,6 +834,20 @@ function createThreeStage(THREE, canvas) {
       torus.rotation.x = time * 0.25;
       torus.rotation.y = time * 0.35;
       tube.rotation.y = -time * 0.025;
+      station.rotation.y = -0.24 + target.x * 0.08 + Math.sin(time * 0.35) * 0.025;
+      station.rotation.x = target.y * 0.035;
+      screenRimTop.scale.x = 0.82 + Math.sin(time * 2.2) * 0.18;
+      screenRimSide.scale.y = 0.72 + Math.cos(time * 1.7) * 0.2;
+      towerLight.scale.y = 0.7 + Math.sin(time * 2.6) * 0.26;
+      hologram.rotation.z = time * 0.9;
+      hologram.scale.setScalar(1 + Math.sin(time * 1.8) * 0.08);
+      keyMeshes.forEach((keyMesh) => {
+        keyMesh.scale.y = 1 + Math.max(0, Math.sin(time * 3.2 + keyMesh.userData.phase)) * 0.75;
+      });
+      projectPanels.forEach((panel, index) => {
+        panel.position.y = 1.6 + Math.sin(time * 0.9 + panel.userData.phase) * 0.18;
+        panel.rotation.z = Math.sin(time * 0.6 + index) * 0.025;
+      });
       // wiggle particles
       pointCloud.rotation.y = time * 0.02;
       const pos = pointCloud.geometry.attributes.position.array;
@@ -575,19 +911,24 @@ function setupProjectModal() {
 
   function open(project) {
     modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("no-scroll");
     modal.querySelector("#project-modal-title").textContent = project.title;
     modal.querySelector(".project-modal-summary").textContent = project.summary;
     modal.querySelector(".project-modal-outcome").textContent = project.outcome || "";
     const media = modal.querySelector(".project-modal-media");
-    media.innerHTML = `<img src="screenshots/${project.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')}.svg" alt="${project.title}" />`;
+    media.innerHTML = `<img src="screenshots/${getProjectArtworkSlug(project)}.svg" alt="${project.title}" />`;
     const links = modal.querySelector(".project-modal-links");
     links.innerHTML = `${project.repoUrl ? `<a href="${project.repoUrl}" target="_blank" rel="noreferrer">GitHub</a>` : ""} ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" rel="noreferrer">Live demo</a>` : ""}`;
     const tags = modal.querySelector(".project-modal-tags");
     tags.innerHTML = project.tags.map((t) => `<span class="project-tag">${t}</span>`).join("");
+    // set current index for carousel navigation
+    const idx = portfolio.projects.findIndex((p) => p.title === project.title);
+    modal.dataset.currentIndex = String(idx >= 0 ? idx : 0);
   }
 
   function closeModal() {
     modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("no-scroll");
   }
 
   close.addEventListener("click", closeModal);
@@ -599,9 +940,35 @@ function setupProjectModal() {
   document.addEventListener("click", (e) => {
     const card = e.target.closest('.project-card');
     if (!card) return;
+    if (e.target.closest("a, button")) return;
     const title = card.querySelector('h3')?.textContent;
     const project = portfolio.projects.find((p) => p.title === title);
     if (project) open(project);
+  });
+
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.getAttribute("aria-hidden") === "false") {
+      closeModal();
+    }
+  });
+
+  // modal carousel controls
+  const prevBtn = modal.querySelector('.modal-prev');
+  const nextBtn = modal.querySelector('.modal-next');
+  function showByIndex(idx) {
+    const p = portfolio.projects[(idx + portfolio.projects.length) % portfolio.projects.length];
+    if (p) open(p);
+    modal.dataset.currentIndex = String((idx + portfolio.projects.length) % portfolio.projects.length);
+  }
+  prevBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const cur = Number(modal.dataset.currentIndex || 0);
+    showByIndex(cur - 1);
+  });
+  nextBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const cur = Number(modal.dataset.currentIndex || 0);
+    showByIndex(cur + 1);
   });
 }
 
@@ -715,6 +1082,34 @@ function createCanvasFallback(canvas) {
     const centerY = height * 0.5;
     const base = Math.min(width, height);
 
+    ctx.save();
+    ctx.translate(centerX - base * 0.04, centerY + base * 0.04);
+    ctx.rotate(Math.sin(frame * 0.01) * 0.025);
+    ctx.fillStyle = "rgba(255,248,234,0.08)";
+    ctx.fillRect(-base * 0.33, base * 0.24, base * 0.66, base * 0.035);
+    ctx.fillStyle = "#171512";
+    ctx.fillRect(-base * 0.24, -base * 0.2, base * 0.48, base * 0.3);
+    const screenGradient = ctx.createLinearGradient(-base * 0.21, -base * 0.17, base * 0.21, base * 0.1);
+    screenGradient.addColorStop(0, "rgba(244,95,67,0.9)");
+    screenGradient.addColorStop(0.45, "rgba(27,120,216,0.82)");
+    screenGradient.addColorStop(1, "rgba(25,143,112,0.8)");
+    ctx.fillStyle = screenGradient;
+    ctx.fillRect(-base * 0.21, -base * 0.17, base * 0.42, base * 0.24);
+    ctx.fillStyle = "rgba(13,15,15,0.9)";
+    ctx.fillRect(-base * 0.18, -base * 0.13, base * 0.22, base * 0.032);
+    ctx.fillRect(-base * 0.18, -base * 0.08, base * 0.32, base * 0.025);
+    ctx.fillRect(-base * 0.18, -base * 0.035, base * 0.26, base * 0.025);
+    ctx.fillStyle = "#242018";
+    ctx.fillRect(-base * 0.03, base * 0.1, base * 0.06, base * 0.15);
+    ctx.fillRect(-base * 0.14, base * 0.22, base * 0.28, base * 0.035);
+    for (let index = 0; index < 28; index += 1) {
+      ctx.fillStyle = index % 4 === 0 ? "#f45f43" : "#69aef4";
+      ctx.globalAlpha = 0.42 + Math.sin(frame * 0.08 + index) * 0.22;
+      ctx.fillRect(-base * 0.28 + (index % 10) * base * 0.035, base * 0.31 + Math.floor(index / 10) * base * 0.028, base * 0.022, base * 0.012);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
     nodes.forEach((node, index) => {
       const angle = node.angle + frame * 0.004 * node.speed;
       const x = centerX + Math.cos(angle) * base * node.radius;
@@ -811,6 +1206,42 @@ enhanceProjectCards();
 setupProjectModal();
 startCursorTrail();
 setupScrollParallax();
+typeHero();
+revealSections();
+
+// Typing effect for hero name and role
+function typeHero() {
+  const nameEl = $('[data-name]');
+  const roleEl = $('[data-role]');
+  if (!nameEl || !roleEl) return;
+  const name = portfolio.name;
+  const role = portfolio.role;
+  nameEl.textContent = '';
+  roleEl.textContent = '';
+  let i = 0;
+  let j = 0;
+  const nameTimer = setInterval(() => {
+    nameEl.textContent += name[i++] || '';
+    if (i >= name.length) clearInterval(nameTimer);
+  }, 60);
+  setTimeout(() => {
+    const roleTimer = setInterval(() => {
+      roleEl.textContent += role[j++] || '';
+      if (j >= role.length) clearInterval(roleTimer);
+    }, 18);
+  }, Math.min(800 + name.length * 40, 2000));
+}
+
+// Reveal sections using IntersectionObserver
+function revealSections() {
+  const sections = $$('section');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) entry.target.classList.add('is-visible');
+    });
+  }, { threshold: 0.12 });
+  sections.forEach((s) => obs.observe(s));
+}
 
 // gentle scroll-based camera parallax
 function setupScrollParallax() {

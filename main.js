@@ -136,6 +136,25 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 const root = document.documentElement;
 const savedTheme = localStorage.getItem("portfolio-theme");
 
+// Feature flag: enable the project modal diorama for MediSync (set to false to disable)
+// Disabled by default to remove background 3D diorama per user request
+const ENABLE_PROJECT_DIORAMA = false;
+
+// Cleanup any leftover diorama canvas or fullscreen modal state (in case previous runs left elements)
+(function cleanupDioramaArtifacts() {
+  try {
+    const existing = document.getElementById('project-diorama');
+    if (existing) existing.remove();
+  } catch (e) {}
+  try {
+    const modal = document.getElementById('project-modal');
+    if (modal) {
+      const shell = modal.querySelector('.project-modal-shell');
+      if (shell && shell.classList.contains('fullscreen')) shell.classList.remove('fullscreen');
+    }
+  } catch (e) {}
+})();
+
 const preloader = document.getElementById("preloader");
 
 function hidePreloader() {
@@ -924,11 +943,27 @@ function setupProjectModal() {
     // set current index for carousel navigation
     const idx = portfolio.projects.findIndex((p) => p.title === project.title);
     modal.dataset.currentIndex = String(idx >= 0 ? idx : 0);
+    // optionally show lightweight diorama for MediSync and expand modal to fullscreen
+    const shell = modal.querySelector('.project-modal-shell');
+    if (ENABLE_PROJECT_DIORAMA && project.title === "MediSync Hospital Management") {
+      try {
+        if (shell) shell.classList.add('fullscreen');
+        showProjectDiorama(project, modal);
+      } catch (err) {
+        if (shell) shell.classList.remove('fullscreen');
+        console.warn('project diorama error', err);
+      }
+    } else {
+      if (shell) shell.classList.remove('fullscreen');
+    }
   }
 
   function closeModal() {
     modal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("no-scroll");
+    if (ENABLE_PROJECT_DIORAMA) destroyProjectDiorama(modal);
+    const shell = modal.querySelector('.project-modal-shell');
+    if (shell) shell.classList.remove('fullscreen');
   }
 
   close.addEventListener("click", closeModal);
@@ -1266,4 +1301,90 @@ function setupScrollParallax() {
     requestAnimationFrame(tick);
   }
   tick();
+}
+
+// --- Project modal diorama (guarded by ENABLE_PROJECT_DIORAMA) ---
+async function showProjectDiorama(project, modal) {
+  if (!modal || modal.__diorama) return;
+  const shell = modal.querySelector('.project-modal-shell');
+  if (!shell) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.id = 'project-diorama';
+  canvas.setAttribute('aria-hidden', 'true');
+  shell.prepend(canvas);
+
+  let THREE;
+  try {
+    THREE = window.THREE || (await withTimeout(import('https://unpkg.com/three@0.165.0/build/three.module.js'), 4000));
+    THREE = THREE.default || THREE;
+  } catch (e) {
+    canvas.remove();
+    throw e;
+  }
+
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+  camera.position.set(0, 1.6, 4.6);
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+  const key = new THREE.DirectionalLight(0xffffff, 0.9);
+  key.position.set(4, 6, 2);
+  scene.add(key);
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), new THREE.MeshStandardMaterial({ color: 0x0d0f0f, roughness: 0.8 }));
+  ground.rotation.x = -Math.PI / 2; ground.position.y = -0.6; scene.add(ground);
+
+  const building = new THREE.Group();
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 0.6 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x1b78d8, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.95 });
+  const mainBox = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.2, 1.8), baseMat); mainBox.position.set(0, 0.18, 0); building.add(mainBox);
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.6, 1.0), baseMat); tower.position.set(-1.2, 0.5, 0.2); building.add(tower);
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.1), glassMat); glass.position.set(0.6, 0.25, 0.95); building.add(glass);
+
+  const signCanvas = document.createElement('canvas'); signCanvas.width = 512; signCanvas.height = 256;
+  const sctx = signCanvas.getContext('2d'); sctx.fillStyle = '#0d0f0f'; sctx.fillRect(0,0,512,256);
+  sctx.fillStyle = '#ffffff'; sctx.font = '700 40px Inter, Arial'; sctx.fillText('MEDISYNC', 28, 88);
+  sctx.font = '600 22px Inter, Arial'; sctx.fillText('HOSPITAL', 28, 130);
+  const signTex = new THREE.CanvasTexture(signCanvas);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.5), new THREE.MeshBasicMaterial({ map: signTex }));
+  sign.position.set(0, 0.9, 0.91); building.add(sign);
+
+  building.position.set(0, -0.1, 0);
+  scene.add(building);
+
+  const van = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.25, 0.25), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+  van.position.set(1.1, -0.38, 0.4); scene.add(van);
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
+    camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
+    camera.updateProjectionMatrix();
+  }
+
+  let frame = 0;
+  function animate() {
+    frame += 1;
+    building.rotation.y = Math.sin(frame * 0.008) * 0.12;
+    renderer.render(scene, camera);
+    modal.__dioramaFrame = requestAnimationFrame(animate);
+  }
+
+  window.addEventListener('resize', resize);
+  resize(); animate();
+
+  modal.__diorama = { renderer, scene, camera, canvas };
+}
+
+function destroyProjectDiorama(modal) {
+  if (!modal || !modal.__diorama) return;
+  if (modal.__dioramaFrame) cancelAnimationFrame(modal.__dioramaFrame);
+  try { if (modal.__diorama.renderer && typeof modal.__diorama.renderer.dispose === 'function') modal.__diorama.renderer.dispose(); } catch (e) {}
+  try { modal.__diorama.canvas.remove(); } catch (e) {}
+  delete modal.__diorama; delete modal.__dioramaFrame;
 }

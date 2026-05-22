@@ -1222,7 +1222,8 @@ h2 {
 }
 
 .contact-panel p {
-  color: rgba(255, 250, 240, 0.74);
+  /* inherit color from section so text matches the current theme/background */
+  color: inherit;
 }
 
 .contact-actions {
@@ -1241,13 +1242,30 @@ h2 {
   align-items: center;
   background: var(--ink);
   border-top: 1px solid rgba(255, 250, 240, 0.15);
-  color: rgba(255, 250, 240, 0.68);
+  /* make footer text follow the page background color for correct contrast in both themes */
+  color: var(--bg);
   display: flex;
   font-size: 0.9rem;
   gap: 1rem;
   justify-content: space-between;
   padding: 1.2rem clamp(20px, 6vw, 84px);
 }
+
+/* Modal diorama canvas (non-interactive background behind modal content) */
+.project-modal-shell {
+  position: relative; /* allow absolute diorama placement */
+}
+
+#project-diorama {
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* behind modal content */
+  border-radius: 12px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.project-modal-content { z-index: 1; }
 
 /* Project modal */
 .project-modal {
@@ -1276,6 +1294,40 @@ h2 {
   padding: 1.2rem;
   position: relative;
   width: 96%;
+}
+
+/* fullscreen variant for MediSync: canvas fills the shell and content sits above */
+.project-modal-shell.fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  border-radius: 0;
+  padding: 2.5rem;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-modal-shell.fullscreen #project-diorama {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.project-modal-shell.fullscreen .project-modal-content {
+  z-index: 1;
+  width: min(1100px, 96%);
+  border-radius: 10px;
+  /* light default */
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+}
+
+:root[data-theme="night"] .project-modal-shell.fullscreen .project-modal-content {
+  background: rgba(13,15,15,0.78);
 }
 
 .project-modal-content {

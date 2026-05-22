@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700">
+  <rect width="100%" height="100%" fill="#0d0f0f"/>
+  <g fill="#fff8ea" font-family="Inter, Arial, sans-serif">
+    <text x="50%" y="40%" font-size="36" text-anchor="middle">MediSync — Hospital Dashboard</text>
+    <rect x="140" y="260" width="920" height="260" rx="12" fill="#1b78d8" opacity="0.12"/>
+    <text x="50%" y="56%" font-size="18" text-anchor="middle" fill="#cfe7ff">Realtime beds • Doctors • Ambulance • Maps</text>
+  </g>
+</svg>

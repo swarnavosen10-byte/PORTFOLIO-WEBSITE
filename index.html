@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Swarnavo Sen's interactive portfolio: healthcare systems, KYC APIs, Python, OpenCV, DSA, and full-stack project work."
+    />
+    <meta name="theme-color" content="#f7f3ea" />
+    <title>Swarnavo Sen | Interactive Portfolio</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="stylesheet" href="styles.css" />
+    <script defer src="main.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#work">Skip to work</a>
+
+    <header class="site-header" aria-label="Primary navigation">
+      <a class="brand" href="#top" aria-label="Swarnavo home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Swarnavo Sen</span>
+      </a>
+      <nav class="nav-links" aria-label="Portfolio sections">
+        <a href="#work">Work</a>
+        <a href="#range">Range</a>
+        <a href="#process">Process</a>
+        <a href="#contact">Contact</a>
+      </nav>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Switch color theme">
+        <span aria-hidden="true"></span>
+      </button>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-label="Portfolio introduction">
+        <div class="hero-visual" id="hero-visual" aria-hidden="true">
+          <canvas id="hero-stage"></canvas>
+          <div class="fallback-visual" id="fallback-visual"></div>
+        </div>
+
+        <div class="hero-content">
+          <p class="eyebrow" data-hero-kicker>Portfolio 2026</p>
+          <h1 data-name>Swarnavo</h1>
+          <p class="hero-copy" data-role>
+            Creative engineer building AI-native products, cinematic interfaces, and reliable full-stack systems.
+          </p>
+          <div class="hero-actions" aria-label="Primary actions">
+            <a class="button primary" href="#work">View work</a>
+            <a class="button secondary" href="#contact">Start a project</a>
+          </div>
+        </div>
+
+        <div class="signal-strip" aria-label="Portfolio highlights" data-highlights></div>
+      </section>
+
+      <section class="section intro-section" aria-labelledby="intro-title">
+        <div class="section-shell intro-grid">
+          <div>
+            <p class="eyebrow">Current Signal</p>
+            <h2 id="intro-title">A portfolio built like a product surface.</h2>
+          </div>
+          <p data-intro>
+            This site is ready for your real case studies, metrics, writing, and contact channels. The structure is
+            intentionally premium, fast, and editable.
+          </p>
+        </div>
+      </section>
+
+      <section class="section work-section" id="work" aria-labelledby="work-title">
+        <div class="section-shell">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Selected Work</p>
+              <h2 id="work-title">Proof, not decoration.</h2>
+            </div>
+            <div class="filter-bar" role="list" aria-label="Filter projects" data-filters></div>
+          </div>
+          <div class="project-grid" data-projects></div>
+        </div>
+      </section>
+
+      <section class="section range-section" id="range" aria-labelledby="range-title">
+        <div class="section-shell range-layout">
+          <div>
+            <p class="eyebrow">Operating Range</p>
+            <h2 id="range-title">From blank page to shipped system.</h2>
+            <p class="section-copy" data-range-copy>
+              I move comfortably between product thinking, interface craft, backend architecture, automation, and
+              immersive experiences.
+            </p>
+          </div>
+          <div class="range-grid" data-range></div>
+        </div>
+      </section>
+
+      <section class="section process-section" id="process" aria-labelledby="process-title">
+        <div class="section-shell">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Process</p>
+              <h2 id="process-title">How the work gets sharper.</h2>
+            </div>
+            <p class="section-copy">A tight loop for turning ambition into a usable thing.</p>
+          </div>
+          <div class="process-list" data-process></div>
+        </div>
+      </section>
+
+      <section class="section contact-section" id="contact" aria-labelledby="contact-title">
+        <div class="section-shell contact-layout">
+          <div>
+            <p class="eyebrow">Contact</p>
+            <h2 id="contact-title">Bring the wild idea. I will help make it real.</h2>
+          </div>
+          <div class="contact-panel">
+            <p data-status>Open to ambitious product teams, labs, and founder-led builds.</p>
+            <div class="contact-actions">
+              <a class="button primary" data-email-link href="mailto:hello@swarnavo.dev">Email me</a>
+              <button class="button secondary" type="button" data-copy-email>Copy email</button>
+            </div>
+            <p class="copy-status" role="status" aria-live="polite" data-copy-status></p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span data-footer-name>Swarnavo</span>
+      <span data-footer-meta>India / Remote</span>
+    </footer>
+
+    <!-- Project modal -->
+    <div id="project-modal" class="project-modal" role="dialog" aria-hidden="true" aria-labelledby="project-modal-title">
+      <div class="project-modal-shell">
+        <button class="modal-close" aria-label="Close project details">×</button>
+        <div class="project-modal-content">
+          <h3 id="project-modal-title"></h3>
+          <div class="project-modal-body">
+            <div class="project-modal-media"></div>
+            <div class="project-modal-copy">
+              <p class="project-modal-summary"></p>
+              <div class="project-modal-links"></div>
+              <div class="project-modal-tags"></div>
+              <p class="project-modal-outcome"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1331,142 +1331,389 @@ async function showProjectDiorama(project, modal) {
 
   // create a canvas placeholder for the GLB renderer and a small status overlay
   const canvas = document.createElement('canvas');
-  canvas.id = 'project-diorama';
+  // use a distinct id for the canvas to avoid colliding with the CSS fallback div (#project-diorama)
+  canvas.id = 'project-diorama-canvas';
   canvas.className = 'medisync-3d-canvas';
   canvas.setAttribute('aria-hidden', 'true');
+  // start hidden until model is ready
+  canvas.style.opacity = '0.3';
+  canvas.style.transition = 'opacity 360ms ease';
+  canvas.style.filter = 'none';
+  canvas.style.background = 'transparent';
   const status = document.createElement('div');
   status.className = 'project-diorama-status';
   status.textContent = '3D: initializing...';
   shell.prepend(canvas);
   shell.prepend(status);
+  try {
+    shell.style.backgroundImage = 'linear-gradient(180deg, rgba(6, 10, 16, 0.88), rgba(6, 10, 16, 0.74))';
+    shell.style.backgroundSize = 'cover';
+    shell.style.backgroundPosition = 'center center';
+    shell.style.backgroundRepeat = 'no-repeat';
+    shell.style.backgroundColor = '#0a1118';
+  } catch (e) {}
   modal.__diorama = { canvas, status };
 
+  // Start prefetch on page load (if not already started). This will fetch and cache
+  // the hospital GLB so parsing can happen instantly when the modal opens.
+  if (!window.__hospitalGLBPromise) {
+    window.__hospitalGLBBuffer = null;
+    window.__hospitalGLBPromise = (async () => {
+      const preloadUrls = [
+        'assets/models/hospital (2).glb',
+        'assets/models/hospital-building-v2/hospital-building-v2.glb'
+      ];
+      for (const url of preloadUrls) {
+        try {
+          console.log('[diorama] preloading', url);
+          const r = await fetch(url);
+          if (!r.ok) {
+            console.warn('[diorama] preload returned', url, r.status);
+            continue;
+          }
+          const ab = await r.arrayBuffer();
+          window.__hospitalGLBBuffer = ab;
+          window.__hospitalGLBUrl = url;
+          console.log('[diorama] preloaded', url, 'bytes=', ab.byteLength);
+          return ab;
+        } catch (e) {
+          console.warn('[diorama] preload error for', url, e);
+        }
+      }
+      return null;
+    })();
+  }
+
   try {
-    let THREE = window.THREE || (await withTimeout(import('https://unpkg.com/three@0.165.0/build/three.module.js'), 6000));
-    THREE = THREE.default || THREE;
+    let THREE = window.THREE || (await withTimeout(import('three'), 6000));
     window.THREE = THREE;
 
-    const { GLTFLoader } = await import('https://unpkg.com/three@0.165.0/examples/jsm/loaders/GLTFLoader.js');
-    const { OrbitControls } = await import('https://unpkg.com/three@0.165.0/examples/jsm/controls/OrbitControls.js');
+    const { GLTFLoader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js?module');
+    const { OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js?module');
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // cap DPR to 1 for smoother loading on low-end GPUs / during heavy GLB parsing
+    const DPR = 1;
+    renderer.setPixelRatio(DPR);
+    renderer.physicallyCorrectLights = true;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setClearColor(0x000000, 0);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
-    camera.position.set(0, 1.8, 6);
+    const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 240);
+    camera.position.set(0, 1.6, 8);
 
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.9));
-    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
-    dir.position.set(5, 10, 7);
+    // create and add a procedural hospital exterior immediately so the modal shows
+    // a hospital-like background instantly while GLBs load in the background.
+    let proceduralHospital = null;
+    function createProceduralHospital() {
+      const proc = new THREE.Group();
+      const buildingGeom = new THREE.BoxGeometry(6, 3.2, 2.5);
+      const buildingMat = new THREE.MeshStandardMaterial({ color: 0xe9eef2, metalness: 0.05, roughness: 0.7 });
+      const building = new THREE.Mesh(buildingGeom, buildingMat);
+      building.position.set(0, 1.6, 0);
+      proc.add(building);
+      // make building smaller and push it back so it reads as a distant background
+      proc.scale.set(0.55, 0.55, 0.55);
+      proc.position.set(0, 0.6, -4);
+      proc.rotation.y = -0.12;
+      const windowGeom = new THREE.PlaneGeometry(0.5, 0.5);
+      for (let row = 0; row < 3; row++) {
+        for (let col = -2; col <= 2; col++) {
+          const winMat = new THREE.MeshStandardMaterial({ color: 0x0b2b3a, emissive: 0x0, roughness: 0.3 });
+          const win = new THREE.Mesh(windowGeom, winMat);
+          win.position.set(col * 1.2, 2.6 - row * 0.9, 1.26);
+          proc.add(win);
+          if (Math.random() > 0.6) {
+            win.material.emissive = new THREE.Color(0xfff6c8);
+            win.material.emissiveIntensity = 0.45;
+          }
+        }
+      }
+      const doorGeom = new THREE.BoxGeometry(1.2, 1.6, 0.1);
+      const doorMat = new THREE.MeshStandardMaterial({ color: 0x1b2b33, metalness: 0.1, roughness: 0.6 });
+      const door = new THREE.Mesh(doorGeom, doorMat);
+      door.position.set(0, 0.9, 1.26);
+      proc.add(door);
+      const signGeom = new THREE.PlaneGeometry(0.6, 0.6);
+      const signMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff4d4d, emissiveIntensity: 0.9 });
+      const sign = new THREE.Mesh(signGeom, signMat);
+      sign.position.set(2.6, 2.6, 1.25);
+      proc.add(sign);
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.MeshStandardMaterial({ color: 0x030406, roughness: 1 }));
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = 0.01;
+      proc.add(ground);
+      return proc;
+    }
+    try {
+      proceduralHospital = createProceduralHospital();
+      scene.add(proceduralHospital);
+    } catch (e) {
+      console.warn('[diorama] procedural hospital creation failed', e);
+    }
+
+    scene.add(new THREE.HemisphereLight(0xf3f9ff, 0xc7d7e6, 1.35));
+    const dir = new THREE.DirectionalLight(0xffffff, 2.05);
+    dir.position.set(6, 11, 9);
     scene.add(dir);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.72));
+
+    // attempt to provide a photographic environment for realistic PBR lighting
+    try {
+      const texLoader = new THREE.TextureLoader();
+      const envUrl = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/equirectangular/venice_sunset_1k.jpg';
+      const envTex = await new Promise((resolve, reject) => texLoader.load(envUrl, resolve, undefined, reject));
+      envTex.mapping = THREE.EquirectangularReflectionMapping;
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      pmrem.compileEquirectangularShader();
+      const envMap = pmrem.fromEquirectangular(envTex).texture;
+      scene.environment = envMap;
+      try { envTex.dispose && envTex.dispose(); } catch (e) {}
+      try { pmrem.dispose && pmrem.dispose(); } catch (e) {}
+    } catch (e) {
+      console.warn('[diorama] envmap load failed', e);
+    }
 
     const loader = new GLTFLoader();
+    const { ContactShadows } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/ContactShadows.js?module');
+    const { SimplifyModifier } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/modifiers/SimplifyModifier.js?module');
     // attempt to add postprocessing for photorealism
-    let composer, renderPass, bloomPass, ssaoPass;
+    let composer, renderPass, bloomPass, ssaoPass, dofPass, colorPass, vignettePass;
     try {
-      const { EffectComposer } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js');
-      const { RenderPass } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/RenderPass.js');
-      const { UnrealBloomPass } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js');
-      const { SSAOPass } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/SSAOPass.js');
+      const { EffectComposer } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js?module');
+      const { RenderPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js?module');
+      const { UnrealBloomPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js?module');
+      const { SSAOPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/SSAOPass.js?module');
+      const { ShaderPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js?module');
+      const { FXAAShader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js?module');
+      const { BokehPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/BokehPass.js?module');
+      const { ColorCorrectionShader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/ColorCorrectionShader.js?module');
+      const { VignetteShader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/VignetteShader.js?module');
       composer = new EffectComposer(renderer);
       renderPass = new RenderPass(scene, camera);
       composer.addPass(renderPass);
-      bloomPass = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.8, 0.4, 0.12);
-      bloomPass.threshold = 0.85;
-      bloomPass.strength = 0.6;
-      bloomPass.radius = 0.55;
-      composer.addPass(bloomPass);
-      ssaoPass = new SSAOPass(scene, camera, 512, 512);
-      ssaoPass.kernelRadius = 12;
+      // FXAA
+      const fxaaPass = new ShaderPass(FXAAShader);
+      fxaaPass.material.uniforms['resolution'].value.set(1 / (window.innerWidth * DPR), 1 / (window.innerHeight * DPR));
+      // Bloom
+      bloomPass = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.8, 0.45, 0.35);
+      bloomPass.threshold = 0.84;
+      bloomPass.strength = 0.55;
+      bloomPass.radius = 0.48;
+      // SSAO
+      ssaoPass = new SSAOPass(scene, camera, 1024, 1024);
+      ssaoPass.kernelRadius = 14;
       ssaoPass.minDistance = 0.001;
-      ssaoPass.maxDistance = 0.02;
+      ssaoPass.maxDistance = 0.03;
+      // DOF
+      dofPass = new BokehPass(scene, camera, {
+        focus: 1.65,
+        aperture: 0.000075,
+        maxblur: 0.008,
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+      // color grading and vignette
+      colorPass = new ShaderPass(ColorCorrectionShader);
+      colorPass.uniforms.powRGB.value.set(0.98, 0.99, 1.02);
+      colorPass.uniforms.mulRGB.value.set(1.04, 1.03, 1.02);
+      colorPass.uniforms.addRGB.value.set(0.0, 0.0, 0.0);
+      vignettePass = new ShaderPass(VignetteShader);
+      vignettePass.uniforms.darkness.value = 1.15;
+      vignettePass.uniforms.offset.value = 1.0;
+      composer.addPass(bloomPass);
       composer.addPass(ssaoPass);
+      composer.addPass(dofPass);
+      composer.addPass(colorPass);
+      composer.addPass(vignettePass);
+      composer.addPass(fxaaPass);
     } catch (e) {
       console.warn('postprocessing not available', e);
     }
-    // Try a local model first (drop your hospital GLB at assets/models/hospital.glb),
-    // then fall back to high-fidelity public samples (DamagedHelmet is a PBR demo).
     const MODEL_URLS = [
+      'assets/models/hospital (2).glb',
+      'assets/models/hospital-building-v2/hospital-building-v2.glb',
       'assets/models/hospital.glb',
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Marketplace/glTF-Binary/Marketplace.glb',
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF-Binary/FlightHelmet.glb'
+      'assets/models/hospital-realistic.glb',
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb'
     ];
-
-    // enhance realism: try to load an HDR environment and apply PMREM
-    try {
-      const { RGBELoader } = await import('https://unpkg.com/three@0.165.0/examples/jsm/loaders/RGBELoader.js');
-      const hdrUrls = [
-        'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/equirectangular/royal_esplanade_1k.hdr'
-      ];
-      for (const h of hdrUrls) {
-        try {
-          const rgbe = new RGBELoader();
-          const hdrTex = await rgbe.setDataType(THREE.UnsignedByteType).loadAsync(h);
-          const pmremGen = new THREE.PMREMGenerator(renderer);
-          pmremGen.compileEquirectangularShader();
-          const envMap = pmremGen.fromEquirectangular(hdrTex).texture;
-          scene.environment = envMap;
-          hdrTex.dispose();
-          pmremGen.dispose();
-          break;
-        } catch (e) {
-          console.warn('HDR load failed', h, e);
-        }
-      }
-    } catch (e) {
-      console.warn('RGBELoader not available or HDR failed', e);
-    }
-
-    // set renderer for PBR-friendly output
     try {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.0;
+      renderer.toneMappingExposure = 1.15;
       renderer.outputEncoding = THREE.sRGBEncoding;
     } catch (e) {}
 
     let gltf = null;
-    for (const url of MODEL_URLS) {
+    let loadedModelKind = null;
+    let loadedModelUrl = null;
+    let loadedFromPreload = false;
+
+    // If we have a preloaded hospital buffer, try parsing it first to avoid network latency
+    if (window.__hospitalGLBBuffer) {
       try {
-        if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: loading model ${url}`;
-        gltf = await loader.loadAsync(url);
-        if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: model loaded (${url})`;
-        break;
+        console.log('[diorama] parsing preloaded hospital.glb buffer');
+        if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = '3D: parsing preloaded hospital.glb';
+        gltf = await new Promise((resolve, reject) => {
+          loader.parse(window.__hospitalGLBBuffer, '', resolve, reject);
+        });
+        loadedFromPreload = true;
+        loadedModelUrl = window.__hospitalGLBUrl || 'assets/models/hospital (2).glb';
+        console.log('[diorama] parsed preloaded hospital.glb', gltf);
       } catch (e) {
-        console.warn('failed to load model', url, e);
-        if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: failed to load ${url}`;
+        console.warn('[diorama] parse of preloaded buffer failed', e);
+        gltf = null;
       }
     }
 
-    if (!gltf) throw new Error('no GLB model could be loaded');
-
-    const model = gltf.scene || gltf.scenes?.[0];
-    model.traverse((n) => {
-      if (n.isMesh) {
-        n.castShadow = true;
-        n.receiveShadow = true;
-        if (n.material && Array.isArray(n.material) === false) {
-          try {
-            if (typeof n.material.envMapIntensity === 'number') n.material.envMapIntensity = 1.0;
-            if (typeof n.material.metalness !== 'number') n.material.metalness = Math.min(0.6, n.material.metalness || 0.2);
-            if (typeof n.material.roughness !== 'number') n.material.roughness = n.material.roughness || 0.6;
-            n.material.needsUpdate = true;
-          } catch (e) {
-            n.material.needsUpdate = true;
-          }
+    if (!gltf) {
+      for (const url of MODEL_URLS) {
+        try {
+          console.log('[diorama] attempting to load model:', url);
+          if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: loading model ${url}`;
+          gltf = await loader.loadAsync(url);
+          loadedModelUrl = url;
+          loadedModelKind = 'gltf';
+          loadedFromPreload = /hospital\.glb$/i.test(url);
+          console.log('[diorama] model loaded:', url, gltf);
+          if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: model loaded (${url})`;
+          break;
+        } catch (e) {
+          console.warn('[diorama] failed to load model', url, e);
+          if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: failed to load ${url}`;
         }
       }
-    });
+    }
 
-    scene.add(model);
+    let model = null;
+    if (gltf) {
+      model = gltf.scene || gltf.scenes?.[0];
+      model.traverse((n) => {
+        if (n.isMesh) {
+          n.castShadow = true;
+          n.receiveShadow = true;
+          if (n.material && Array.isArray(n.material) === false) {
+            try {
+              if (typeof n.material.envMapIntensity === 'number') n.material.envMapIntensity = 1.0;
+              if (typeof n.material.metalness !== 'number') n.material.metalness = Math.min(0.6, n.material.metalness || 0.2);
+              if (typeof n.material.roughness !== 'number') n.material.roughness = n.material.roughness || 0.6;
+              n.material.needsUpdate = true;
+            } catch (e) {
+              n.material.needsUpdate = true;
+            }
+          }
+        }
+      });
+      const lod = new THREE.LOD();
+      lod.name = 'hospital-lod';
+      lod.addLevel(model, 0);
+      try {
+        const lowDetail = model.clone(true);
+        lowDetail.traverse((n) => {
+          if (n.isMesh && n.geometry) {
+            try {
+              const modifier = new SimplifyModifier();
+              const geometry = n.geometry.clone();
+              if (!geometry.index) geometry = geometry.toNonIndexed();
+              const targetCount = Math.max(48, Math.floor((geometry.attributes.position.count || 0) * 0.35));
+              const simplified = modifier.modify(geometry, targetCount);
+              if (simplified) n.geometry = simplified;
+            } catch (e) {
+              // keep the clone if simplification fails
+            }
+            try {
+              if (Array.isArray(n.material) === false && n.material) {
+                n.material.roughness = Math.min(0.92, (n.material.roughness ?? 0.6) + 0.12);
+                n.material.metalness = Math.min(0.4, (n.material.metalness ?? 0.15) * 0.6);
+                n.material.envMapIntensity = Math.min(0.8, (n.material.envMapIntensity ?? 1) * 0.72);
+              }
+            } catch (e) {}
+          }
+        });
+        lod.addLevel(lowDetail, 52);
+      } catch (e) {
+        console.warn('[diorama] LOD proxy build failed', e);
+      }
+      scene.add(lod);
+      model = lod;
+      scene.background = new THREE.Color(0xd7e6f2);
+      scene.fog = new THREE.Fog(0xd7e6f2, 16, 46);
+
+      try {
+        const contactShadows = new ContactShadows({
+          renderer,
+          scene,
+          mesh: lod,
+          camera,
+          opacity: 0.72,
+          scale: 12,
+          blur: 2.8,
+          far: 10
+        });
+        contactShadows.position.set(0, -1.92, 0);
+        contactShadows.rotation.x = -Math.PI / 2;
+        contactShadows.visible = true;
+        scene.add(contactShadows);
+      } catch (e) {
+        console.warn('[diorama] contact shadows failed', e);
+      }
+    }
+    try {
+      if (proceduralHospital && model && proceduralHospital !== model && gltf) {
+        try {
+          proceduralHospital.traverse((n) => {
+            if (n.isMesh) {
+              if (n.geometry) n.geometry.dispose && n.geometry.dispose();
+              if (n.material) {
+                if (Array.isArray(n.material)) n.material.forEach(m => m.dispose && m.dispose());
+                else n.material.dispose && n.material.dispose();
+              }
+            }
+          });
+        } catch (e) {}
+        try { scene.remove(proceduralHospital); } catch (e) {}
+        proceduralHospital = null;
+      }
+    } catch (e) {}
+
+    if (!model) {
+      console.warn('[diorama] no GLB model could be loaded — keeping the subtle procedural fallback');
+      model = proceduralHospital;
+    }
+
+    // make the canvas visible now that the model is present
+    try { canvas.style.opacity = '0.96'; } catch(e){}
+    // remove any CSS diorama elements so the GL canvas is visible
+    try {
+      const shellEl = shell || modal.querySelector('.project-modal-shell');
+      if (shellEl) {
+        shellEl.querySelectorAll('.medisync-photo-render, .medisync-3d-scene').forEach((el) => {
+          try { el.remove(); } catch (e) {}
+        });
+      }
+    } catch (e) {}
     // hide status after successful add
     if (modal.__diorama && modal.__diorama.status) {
       modal.__diorama.status.textContent = '3D: ready';
       modal.__diorama.status.style.opacity = '0';
       window.setTimeout(() => { try { modal.__diorama.status.remove(); } catch (e) {} }, 900);
+    }
+
+    // normalize model scale so large OBJ units don't fling the camera away
+    const fitBox = new THREE.Box3().setFromObject(model);
+    const fitSize = fitBox.getSize(new THREE.Vector3());
+    const fitMax = Math.max(fitSize.x, fitSize.y, fitSize.z);
+    if (fitMax > 0) {
+      const targetMax = 10.5;
+      const fitScale = targetMax / fitMax;
+      if (fitScale > 0 && fitScale < 1) {
+        model.scale.multiplyScalar(fitScale);
+        model.updateMatrixWorld(true);
+      }
     }
 
     // frame model
@@ -1476,29 +1723,102 @@ async function showProjectDiorama(project, modal) {
     model.position.sub(center);
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = (camera.fov * Math.PI) / 180;
-    const camZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.6;
-    camera.position.set(0, Math.max(1.0, size.y * 0.5), camZ);
-    camera.lookAt(0, size.y * 0.15, 0);
+    const camZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 0.9;
+    camera.position.set(maxDim * 0.04, Math.max(1.7, size.y * 0.46), camZ * 0.88);
+    camera.lookAt(0, size.y * 0.16, 0);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enablePan = false;
     controls.enableZoom = false;
     controls.autoRotate = true;
-    controls.autoRotateSpeed = 0.6;
     controls.enableDamping = true;
+    controls.target.set(0, size.y * 0.16, 0);
+
+    const modelRig = new THREE.Group();
+    modelRig.add(model);
+    scene.add(modelRig);
+
+    const cursor = { x: 0, y: 0, tx: 0, ty: 0 };
+    const updateCursor = (event) => {
+      try {
+        const rect = canvas.getBoundingClientRect();
+        // compute normalized coords relative to canvas
+        const nx = (event.clientX - rect.left) / Math.max(1, rect.width) - 0.5;
+        const ny = (event.clientY - rect.top) / Math.max(1, rect.height) - 0.5;
+        cursor.tx = THREE.MathUtils.clamp(nx, -0.6, 0.6);
+        cursor.ty = THREE.MathUtils.clamp(ny, -0.6, 0.6);
+      } catch (e) {}
+      try { controls.autoRotate = false; } catch (e) {}
+    };
+    const resetCursor = () => {
+      cursor.tx = 0;
+      cursor.ty = 0;
+      try { controls.autoRotate = true; } catch (e) {}
+    };
+    // global pointer handling so movement works even if canvas is partially covered
+    window.addEventListener('pointermove', updateCursor, { passive: true });
+    window.addEventListener('pointerout', resetCursor);
+    window.addEventListener('pointercancel', resetCursor);
+
+    const label = createTextPlane(
+      THREE,
+      'MediSync',
+      1024,
+      320,
+      '#f8fbff',
+      'rgba(12, 22, 36, 0.72)',
+      'bold 112px Arial, sans-serif',
+      'rgba(124, 211, 255, 0.95)'
+    );
+    label.scale.set(Math.max(2.1, size.x * 0.72), Math.max(0.68, size.y * 0.16), 1);
+    label.position.set(0, size.y * 0.64, Math.max(0.12, size.z * 0.2));
+    label.renderOrder = 20;
+    try {
+      label.material.transparent = true;
+      label.material.depthWrite = false;
+      label.material.depthTest = false;
+    } catch (e) {}
+    try {
+      if (scene.environment && label.material && 'envMap' in label.material) {
+        label.material.envMap = scene.environment;
+        label.material.envMapIntensity = 1.15;
+        label.material.metalness = 0.28;
+        label.material.roughness = 0.42;
+        label.material.needsUpdate = true;
+      }
+    } catch (e) {}
+    model.add(label);
 
     function resize() {
       const rect = canvas.getBoundingClientRect();
-      renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
-      camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
+      const width = Math.max(1, Math.floor(rect.width));
+      const height = Math.max(1, Math.floor(rect.height));
+      renderer.setSize(width, height, true);
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
+      if (composer && typeof composer.setSize === 'function') composer.setSize(width, height);
     }
 
     window.addEventListener('resize', resize);
     resize();
 
     let raf = 0;
+    const clock = new THREE.Clock();
     const tick = () => {
+      const delta = Math.min(clock.getDelta(), 0.05);
+      // stronger damping for snappier response; lower for smoother
+      cursor.x = THREE.MathUtils.damp(cursor.x, cursor.tx, 10, delta);
+      cursor.y = THREE.MathUtils.damp(cursor.y, cursor.ty, 10, delta);
+
+      modelRig.rotation.y = cursor.x * 0.5;
+      modelRig.rotation.x = -cursor.y * 0.16;
+      modelRig.position.x = cursor.x * 0.7;
+      modelRig.position.y = cursor.y * 0.35;
+      modelRig.position.z = Math.sin(performance.now() * 0.0005) * 0.06;
+
+      camera.position.x = THREE.MathUtils.damp(camera.position.x, maxDim * 0.04 + cursor.x * 0.35, 6, delta);
+      camera.position.y = THREE.MathUtils.damp(camera.position.y, Math.max(1.7, size.y * 0.46) + cursor.y * 0.22, 6, delta);
+      camera.lookAt(0, size.y * 0.16, 0);
       controls.update();
       if (composer) {
         composer.render();
@@ -1522,6 +1842,18 @@ async function showProjectDiorama(project, modal) {
         try {
           window.removeEventListener('resize', resize);
         } catch (e) {}
+          try {
+            window.removeEventListener('pointermove', updateCursor);
+            window.removeEventListener('pointerout', resetCursor);
+            window.removeEventListener('pointercancel', resetCursor);
+          } catch (e) {}
+          try {
+            const pointerTarget = modal.querySelector('.project-modal-shell') || modal;
+            if (pointerTarget && pointerTarget.removeEventListener) {
+              pointerTarget.removeEventListener('pointermove', updateCursor);
+              pointerTarget.removeEventListener('pointerleave', resetCursor);
+            }
+          } catch (e) {}
         try {
           if (composer && typeof composer.dispose === 'function') composer.dispose();
         } catch (e) {}
@@ -1555,11 +1887,13 @@ function createMediSyncCssDiorama(modal) {
   `;
   const target = modal || scene;
   let raf = 0;
-  const pointer = { x: 0, y: 0, dirty: false };
+  const pointer = { x: 0, y: 0, tx: 0, ty: 0, dirty: false };
   const applyPointer = () => {
     raf = 0;
     if (!pointer.dirty) return;
     pointer.dirty = false;
+    pointer.x += (pointer.tx - pointer.x) * 0.12;
+    pointer.y += (pointer.ty - pointer.y) * 0.12;
     scene.style.setProperty("--med-pan-x", `${(pointer.x * 18).toFixed(2)}px`);
     scene.style.setProperty("--med-pan-y", `${(pointer.y * 10).toFixed(2)}px`);
     scene.style.setProperty("--med-scale", `${(1.015 + Math.abs(pointer.x) * 0.006).toFixed(4)}`);
@@ -1568,14 +1902,14 @@ function createMediSyncCssDiorama(modal) {
   };
   const move = (event) => {
     const rect = scene.getBoundingClientRect();
-    pointer.x = (event.clientX - rect.left) / Math.max(1, rect.width) - 0.5;
-    pointer.y = (event.clientY - rect.top) / Math.max(1, rect.height) - 0.5;
+    pointer.tx = (event.clientX - rect.left) / Math.max(1, rect.width) - 0.5;
+    pointer.ty = (event.clientY - rect.top) / Math.max(1, rect.height) - 0.5;
     pointer.dirty = true;
     if (!raf) raf = requestAnimationFrame(applyPointer);
   };
   const leave = () => {
-    pointer.x = 0;
-    pointer.y = 0;
+    pointer.tx = 0;
+    pointer.ty = 0;
     pointer.dirty = true;
     if (!raf) raf = requestAnimationFrame(applyPointer);
   };
@@ -1610,12 +1944,13 @@ function createTextPlane(THREE, text, width, height, color, background, font, gl
   });
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
-  return new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true }));
+  const mat = new THREE.MeshStandardMaterial({ map: texture, transparent: true, metalness: 0.18, roughness: 0.46 });
+  // don't assume env yet - will be set by caller when available
+  return new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
 }
 
 function addAmbulance(THREE, group, x, y, z, redMat, whiteMat) {
   const ambulance = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf7f7f2, roughness: 0.38 });
   const glass = new THREE.MeshStandardMaterial({ color: 0x17324b, roughness: 0.18, metalness: 0.15 });
   const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0c0d, roughness: 0.7 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.38, 0.42), bodyMat);

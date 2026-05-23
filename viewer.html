@@ -52,6 +52,7 @@
     ];
 
     async function tryLoadModels(list) {
+      const errors = [];
       for (const p of list) {
         document.getElementById('modelName').textContent = p;
         console.log('[viewer] attempting to load', p);
@@ -61,11 +62,14 @@
           document.getElementById('info').textContent = 'Loaded: ' + p;
           return gltf;
         } catch (err) {
-          console.warn('[viewer] failed to load', p, err && err.message ? err.message : err);
+          const msg = err && err.message ? err.message : String(err);
+          errors.push(`${p}: ${msg}`);
+          console.warn('[viewer] failed to load', p, msg);
           // try next
         }
       }
-      throw new Error('none of the model candidates could be loaded');
+      const errText = errors.length ? errors.join(' | ') : 'none of the model candidates could be loaded';
+      throw new Error(errText);
     }
 
     tryLoadModels(modelCandidates).then((gltf) => {

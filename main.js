@@ -1549,9 +1549,9 @@ async function showProjectDiorama(project, modal) {
       console.warn('postprocessing not available', e);
     }
     const MODEL_URLS = [
-      // safe, no-spaces copy created for reliable loading
-      'assets/models/hospital-medisync.glb',
       'assets/models/hospital (2).glb',
+      // safe, no-spaces copy kept as a fallback only
+      'assets/models/hospital-medisync.glb',
       'assets/models/hospital-building-v2/hospital-building-v2.glb',
       'assets/models/hospital.glb',
       'assets/models/hospital-realistic.glb',

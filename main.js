@@ -1480,8 +1480,21 @@ async function showProjectDiorama(project, modal) {
     }
 
     const loader = new GLTFLoader();
-    const { ContactShadows } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/ContactShadows.js?module');
-    const { SimplifyModifier } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/modifiers/SimplifyModifier.js?module');
+    // load optional helpers conservatively — if they fail, continue without them
+    let ContactShadows = null;
+    let SimplifyModifier = null;
+    try {
+      const cs = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/ContactShadows.js?module');
+      ContactShadows = cs.ContactShadows;
+    } catch (e) {
+      console.warn('[diorama] ContactShadows import failed', e);
+    }
+    try {
+      const sm = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/modifiers/SimplifyModifier.js?module');
+      SimplifyModifier = sm.SimplifyModifier;
+    } catch (e) {
+      console.warn('[diorama] SimplifyModifier import failed', e);
+    }
     // attempt to add postprocessing for photorealism
     let composer, renderPass, bloomPass, ssaoPass, dofPass, colorPass, vignettePass;
     try {

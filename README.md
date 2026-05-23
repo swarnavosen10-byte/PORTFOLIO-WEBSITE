@@ -29,6 +29,23 @@ python -m http.server 8000
 # then open http://localhost:8000
 ```
 
+## 3D Model (MediSync modal)
+
+The MediSync project modal loads a realistic GLB model when opened. By default the site will try these locations in order:
+
+- `assets/models/hospital.glb` (recommended: drop your hospital GLB here)
+- DamagedHelmet (high-fidelity PBR sample)
+- Marketplace or FlightHelmet (fallback samples)
+
+To test locally:
+
+```bash
+python -m http.server 8000
+# open http://localhost:8000 and click the MediSync card
+```
+
+If you have a custom `.glb`, place it at `assets/models/hospital.glb`. The loader will prefer that file first. If you want me to add a specific hospital GLB into the repo, upload it or tell me the URL and I'll add it and tune camera/lighting.
+
 Deploy options:
 
 - GitHub Pages: push the repository to GitHub and enable Pages from the `main` branch (or `gh-pages`).

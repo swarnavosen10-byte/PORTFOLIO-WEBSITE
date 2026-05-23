@@ -136,9 +136,8 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 const root = document.documentElement;
 const savedTheme = localStorage.getItem("portfolio-theme");
 
-// Feature flag: enable the project modal diorama for MediSync (set to false to disable)
-// Disabled by default to remove background 3D diorama per user request
-const ENABLE_PROJECT_DIORAMA = false;
+// Feature flag: enable the project modal diorama for MediSync.
+const ENABLE_PROJECT_DIORAMA = true;
 
 // Cleanup any leftover diorama canvas or fullscreen modal state (in case previous runs left elements)
 (function cleanupDioramaArtifacts() {
@@ -276,6 +275,11 @@ function renderProjects(filter) {
                 ${project.tags.map((tag) => `<span>${tag}</span>`).join("")}
               </div>
               <div class="project-links" aria-label="${project.title} links">
+                ${
+                  project.title === "MediSync Hospital Management"
+                    ? `<button class="project-overview-button" type="button" data-project-overview="${project.title}">Overview</button>`
+                    : ""
+                }
                 ${project.repoUrl ? `<a href="${project.repoUrl}" target="_blank" rel="noreferrer">GitHub</a>` : ""}
                 ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" rel="noreferrer">Live demo</a>` : ""}
               </div>
@@ -948,13 +952,21 @@ function setupProjectModal() {
     if (ENABLE_PROJECT_DIORAMA && project.title === "MediSync Hospital Management") {
       try {
         if (shell) shell.classList.add('fullscreen');
-        showProjectDiorama(project, modal);
+        modal.dataset.mode = "medisync";
+        showProjectDiorama(project, modal).catch((err) => {
+          if (shell) shell.classList.remove('fullscreen');
+          delete modal.dataset.mode;
+          console.warn('project diorama error', err);
+        });
       } catch (err) {
         if (shell) shell.classList.remove('fullscreen');
+        delete modal.dataset.mode;
         console.warn('project diorama error', err);
       }
     } else {
       if (shell) shell.classList.remove('fullscreen');
+      if (modal.__diorama) destroyProjectDiorama(modal);
+      delete modal.dataset.mode;
     }
   }
 
@@ -964,6 +976,7 @@ function setupProjectModal() {
     if (ENABLE_PROJECT_DIORAMA) destroyProjectDiorama(modal);
     const shell = modal.querySelector('.project-modal-shell');
     if (shell) shell.classList.remove('fullscreen');
+    delete modal.dataset.mode;
   }
 
   close.addEventListener("click", closeModal);
@@ -973,6 +986,13 @@ function setupProjectModal() {
 
   // attach click handlers to project cards
   document.addEventListener("click", (e) => {
+    const overviewButton = e.target.closest("[data-project-overview]");
+    if (overviewButton) {
+      const project = portfolio.projects.find((p) => p.title === overviewButton.dataset.projectOverview);
+      if (project) open(project);
+      return;
+    }
+
     const card = e.target.closest('.project-card');
     if (!card) return;
     if (e.target.closest("a, button")) return;
@@ -1309,81 +1329,447 @@ async function showProjectDiorama(project, modal) {
   const shell = modal.querySelector('.project-modal-shell');
   if (!shell) return;
 
+  // create a canvas placeholder for the GLB renderer and a small status overlay
   const canvas = document.createElement('canvas');
   canvas.id = 'project-diorama';
+  canvas.className = 'medisync-3d-canvas';
   canvas.setAttribute('aria-hidden', 'true');
+  const status = document.createElement('div');
+  status.className = 'project-diorama-status';
+  status.textContent = '3D: initializing...';
   shell.prepend(canvas);
+  shell.prepend(status);
+  modal.__diorama = { canvas, status };
 
-  let THREE;
   try {
-    THREE = window.THREE || (await withTimeout(import('https://unpkg.com/three@0.165.0/build/three.module.js'), 4000));
+    let THREE = window.THREE || (await withTimeout(import('https://unpkg.com/three@0.165.0/build/three.module.js'), 6000));
     THREE = THREE.default || THREE;
-  } catch (e) {
-    canvas.remove();
-    throw e;
+    window.THREE = THREE;
+
+    const { GLTFLoader } = await import('https://unpkg.com/three@0.165.0/examples/jsm/loaders/GLTFLoader.js');
+    const { OrbitControls } = await import('https://unpkg.com/three@0.165.0/examples/jsm/controls/OrbitControls.js');
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
+    camera.position.set(0, 1.8, 6);
+
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 0.9));
+    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+    dir.position.set(5, 10, 7);
+    scene.add(dir);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+
+    const loader = new GLTFLoader();
+    // attempt to add postprocessing for photorealism
+    let composer, renderPass, bloomPass, ssaoPass;
+    try {
+      const { EffectComposer } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js');
+      const { RenderPass } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/RenderPass.js');
+      const { UnrealBloomPass } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js');
+      const { SSAOPass } = await import('https://unpkg.com/three@0.165.0/examples/jsm/postprocessing/SSAOPass.js');
+      composer = new EffectComposer(renderer);
+      renderPass = new RenderPass(scene, camera);
+      composer.addPass(renderPass);
+      bloomPass = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.8, 0.4, 0.12);
+      bloomPass.threshold = 0.85;
+      bloomPass.strength = 0.6;
+      bloomPass.radius = 0.55;
+      composer.addPass(bloomPass);
+      ssaoPass = new SSAOPass(scene, camera, 512, 512);
+      ssaoPass.kernelRadius = 12;
+      ssaoPass.minDistance = 0.001;
+      ssaoPass.maxDistance = 0.02;
+      composer.addPass(ssaoPass);
+    } catch (e) {
+      console.warn('postprocessing not available', e);
+    }
+    // Try a local model first (drop your hospital GLB at assets/models/hospital.glb),
+    // then fall back to high-fidelity public samples (DamagedHelmet is a PBR demo).
+    const MODEL_URLS = [
+      'assets/models/hospital.glb',
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Marketplace/glTF-Binary/Marketplace.glb',
+      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/FlightHelmet/glTF-Binary/FlightHelmet.glb'
+    ];
+
+    // enhance realism: try to load an HDR environment and apply PMREM
+    try {
+      const { RGBELoader } = await import('https://unpkg.com/three@0.165.0/examples/jsm/loaders/RGBELoader.js');
+      const hdrUrls = [
+        'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/equirectangular/royal_esplanade_1k.hdr'
+      ];
+      for (const h of hdrUrls) {
+        try {
+          const rgbe = new RGBELoader();
+          const hdrTex = await rgbe.setDataType(THREE.UnsignedByteType).loadAsync(h);
+          const pmremGen = new THREE.PMREMGenerator(renderer);
+          pmremGen.compileEquirectangularShader();
+          const envMap = pmremGen.fromEquirectangular(hdrTex).texture;
+          scene.environment = envMap;
+          hdrTex.dispose();
+          pmremGen.dispose();
+          break;
+        } catch (e) {
+          console.warn('HDR load failed', h, e);
+        }
+      }
+    } catch (e) {
+      console.warn('RGBELoader not available or HDR failed', e);
+    }
+
+    // set renderer for PBR-friendly output
+    try {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.0;
+      renderer.outputEncoding = THREE.sRGBEncoding;
+    } catch (e) {}
+
+    let gltf = null;
+    for (const url of MODEL_URLS) {
+      try {
+        if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: loading model ${url}`;
+        gltf = await loader.loadAsync(url);
+        if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: model loaded (${url})`;
+        break;
+      } catch (e) {
+        console.warn('failed to load model', url, e);
+        if (modal.__diorama && modal.__diorama.status) modal.__diorama.status.textContent = `3D: failed to load ${url}`;
+      }
+    }
+
+    if (!gltf) throw new Error('no GLB model could be loaded');
+
+    const model = gltf.scene || gltf.scenes?.[0];
+    model.traverse((n) => {
+      if (n.isMesh) {
+        n.castShadow = true;
+        n.receiveShadow = true;
+        if (n.material && Array.isArray(n.material) === false) {
+          try {
+            if (typeof n.material.envMapIntensity === 'number') n.material.envMapIntensity = 1.0;
+            if (typeof n.material.metalness !== 'number') n.material.metalness = Math.min(0.6, n.material.metalness || 0.2);
+            if (typeof n.material.roughness !== 'number') n.material.roughness = n.material.roughness || 0.6;
+            n.material.needsUpdate = true;
+          } catch (e) {
+            n.material.needsUpdate = true;
+          }
+        }
+      }
+    });
+
+    scene.add(model);
+    // hide status after successful add
+    if (modal.__diorama && modal.__diorama.status) {
+      modal.__diorama.status.textContent = '3D: ready';
+      modal.__diorama.status.style.opacity = '0';
+      window.setTimeout(() => { try { modal.__diorama.status.remove(); } catch (e) {} }, 900);
+    }
+
+    // frame model
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    model.position.sub(center);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const fov = (camera.fov * Math.PI) / 180;
+    const camZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.6;
+    camera.position.set(0, Math.max(1.0, size.y * 0.5), camZ);
+    camera.lookAt(0, size.y * 0.15, 0);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enablePan = false;
+    controls.enableZoom = false;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.6;
+    controls.enableDamping = true;
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
+      camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
+      camera.updateProjectionMatrix();
+    }
+
+    window.addEventListener('resize', resize);
+    resize();
+
+    let raf = 0;
+    const tick = () => {
+      controls.update();
+      if (composer) {
+        composer.render();
+      } else {
+        renderer.render(scene, camera);
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+
+    modal.__diorama = {
+      canvas,
+      renderer,
+      scene,
+      camera,
+      controls,
+      composer,
+      status: modal.__diorama.status,
+      cancel() {
+        cancelAnimationFrame(raf);
+        try {
+          window.removeEventListener('resize', resize);
+        } catch (e) {}
+        try {
+          if (composer && typeof composer.dispose === 'function') composer.dispose();
+        } catch (e) {}
+        try {
+          renderer.dispose();
+        } catch (e) {}
+      }
+    };
+
+  } catch (err) {
+    console.warn('GLB diorama failed, falling back to CSS diorama', err);
+    try {
+      if (modal.__diorama && modal.__diorama.canvas && modal.__diorama.canvas.remove) modal.__diorama.canvas.remove();
+      if (modal.__diorama && modal.__diorama.status && modal.__diorama.status.remove) modal.__diorama.status.remove();
+    } catch (e) {}
+    const sceneEl = createMediSyncCssDiorama(modal);
+    shell.prepend(sceneEl);
+    modal.__diorama = { canvas: sceneEl, css: true, cancel: sceneEl.__cleanup };
   }
+}
 
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x000000, 0);
+function createMediSyncCssDiorama(modal) {
+  const scene = document.createElement("div");
+  scene.id = "project-diorama";
+  scene.className = "medisync-3d-scene is-photo-real";
+  scene.setAttribute("aria-hidden", "true");
+  scene.innerHTML = `
+    <div class="medisync-photo-atmosphere"></div>
+    <div class="medisync-photo-render" role="presentation"></div>
+    <div class="medisync-photo-vignette"></div>
+  `;
+  const target = modal || scene;
+  let raf = 0;
+  const pointer = { x: 0, y: 0, dirty: false };
+  const applyPointer = () => {
+    raf = 0;
+    if (!pointer.dirty) return;
+    pointer.dirty = false;
+    scene.style.setProperty("--med-pan-x", `${(pointer.x * 18).toFixed(2)}px`);
+    scene.style.setProperty("--med-pan-y", `${(pointer.y * 10).toFixed(2)}px`);
+    scene.style.setProperty("--med-scale", `${(1.015 + Math.abs(pointer.x) * 0.006).toFixed(4)}`);
+    scene.style.setProperty("--med-light-x", `${Math.round(62 + pointer.x * 8)}%`);
+    scene.style.setProperty("--med-light-y", `${Math.round(38 + pointer.y * 8)}%`);
+  };
+  const move = (event) => {
+    const rect = scene.getBoundingClientRect();
+    pointer.x = (event.clientX - rect.left) / Math.max(1, rect.width) - 0.5;
+    pointer.y = (event.clientY - rect.top) / Math.max(1, rect.height) - 0.5;
+    pointer.dirty = true;
+    if (!raf) raf = requestAnimationFrame(applyPointer);
+  };
+  const leave = () => {
+    pointer.x = 0;
+    pointer.y = 0;
+    pointer.dirty = true;
+    if (!raf) raf = requestAnimationFrame(applyPointer);
+  };
+  target.addEventListener("pointermove", move, { passive: true });
+  target.addEventListener("pointerleave", leave);
+  scene.__cleanup = () => {
+    cancelAnimationFrame(raf);
+    target.removeEventListener("pointermove", move);
+    target.removeEventListener("pointerleave", leave);
+  };
+  return scene;
+}
 
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
-  camera.position.set(0, 1.6, 4.6);
+function createTextPlane(THREE, text, width, height, color, background, font, glowColor) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, width, height);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = font;
+  ctx.fillStyle = color;
+  if (glowColor) {
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = glowColor;
+  }
+  const lines = text.split("\n");
+  lines.forEach((line, index) => {
+    ctx.fillText(line, width / 2, height / 2 + (index - (lines.length - 1) / 2) * 78);
+  });
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true }));
+}
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-  const key = new THREE.DirectionalLight(0xffffff, 0.9);
-  key.position.set(4, 6, 2);
-  scene.add(key);
+function addAmbulance(THREE, group, x, y, z, redMat, whiteMat) {
+  const ambulance = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0xf7f7f2, roughness: 0.38 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x17324b, roughness: 0.18, metalness: 0.15 });
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x0b0c0d, roughness: 0.7 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.38, 0.42), bodyMat);
+  body.position.y = 0.26;
+  ambulance.add(body);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.32, 0.38), bodyMat);
+  cab.position.set(-0.5, 0.24, 0);
+  ambulance.add(cab);
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.025), redMat);
+  stripe.position.set(-0.02, 0.31, 0.225);
+  ambulance.add(stripe);
+  const windowMesh = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.14, 0.03), glass);
+  windowMesh.position.set(-0.5, 0.35, 0.215);
+  ambulance.add(windowMesh);
+  const crossA = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.026), redMat);
+  crossA.position.set(0.2, 0.36, 0.236);
+  ambulance.add(crossA);
+  const crossB = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.06, 0.027), redMat);
+  crossB.position.set(0.2, 0.36, 0.238);
+  ambulance.add(crossB);
+  [-0.48, 0.34].forEach((wheelX) => {
+    [-0.24, 0.24].forEach((wheelZ) => {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.055, 18), tireMat);
+      wheel.rotation.x = Math.PI / 2;
+      wheel.position.set(wheelX, 0.08, wheelZ);
+      ambulance.add(wheel);
+    });
+  });
+  const light = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.045, 0.08), whiteMat);
+  light.position.set(-0.08, 0.49, 0);
+  ambulance.add(light);
+  ambulance.position.set(x, y, z);
+  ambulance.rotation.y = -0.16;
+  group.add(ambulance);
+}
 
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), new THREE.MeshStandardMaterial({ color: 0x0d0f0f, roughness: 0.8 }));
-  ground.rotation.x = -Math.PI / 2; ground.position.y = -0.6; scene.add(ground);
+function addSignPost(THREE, group, x, y, z, blueMat, whiteMat) {
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x344256, roughness: 0.4, metalness: 0.25 });
+  const sign = new THREE.Group();
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 0.08), postMat);
+  post.position.y = 0.45;
+  sign.add(post);
+  const board = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.78, 0.08), blueMat);
+  board.position.set(0, 0.94, 0);
+  sign.add(board);
+  const crossA = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.34, 0.085), whiteMat);
+  crossA.position.set(0, 1.09, 0.045);
+  sign.add(crossA);
+  const crossB = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.07, 0.086), whiteMat);
+  crossB.position.set(0, 1.09, 0.047);
+  sign.add(crossB);
+  sign.position.set(x, y, z);
+  sign.rotation.y = -0.36;
+  group.add(sign);
+}
 
-  const building = new THREE.Group();
-  const baseMat = new THREE.MeshStandardMaterial({ color: 0xe9e6df, roughness: 0.6 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x1b78d8, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.95 });
-  const mainBox = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.2, 1.8), baseMat); mainBox.position.set(0, 0.18, 0); building.add(mainBox);
-  const tower = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.6, 1.0), baseMat); tower.position.set(-1.2, 0.5, 0.2); building.add(tower);
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.1), glassMat); glass.position.set(0.6, 0.25, 0.95); building.add(glass);
+function addTree(THREE, group, x, y, z) {
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.045, 0.06, 0.45, 10),
+    new THREE.MeshStandardMaterial({ color: 0x5b3a23, roughness: 0.82 })
+  );
+  trunk.position.set(x, y + 0.25, z);
+  group.add(trunk);
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x1d6b3e, roughness: 0.78 });
+  for (let i = 0; i < 3; i += 1) {
+    const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(0.25 - i * 0.03), leafMat);
+    leaves.position.set(x + (i - 1) * 0.12, y + 0.55 + i * 0.12, z + (i % 2 ? 0.08 : -0.04));
+    leaves.castShadow = true;
+    group.add(leaves);
+  }
+}
 
-  const signCanvas = document.createElement('canvas'); signCanvas.width = 512; signCanvas.height = 256;
-  const sctx = signCanvas.getContext('2d'); sctx.fillStyle = '#0d0f0f'; sctx.fillRect(0,0,512,256);
-  sctx.fillStyle = '#ffffff'; sctx.font = '700 40px Inter, Arial'; sctx.fillText('MEDISYNC', 28, 88);
-  sctx.font = '600 22px Inter, Arial'; sctx.fillText('HOSPITAL', 28, 130);
-  const signTex = new THREE.CanvasTexture(signCanvas);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.5), new THREE.MeshBasicMaterial({ map: signTex }));
-  sign.position.set(0, 0.9, 0.91); building.add(sign);
+function addPathLight(THREE, group, x, y, z) {
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x2f3744, roughness: 0.5, metalness: 0.25 });
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xffe0a3 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.025, 0.38, 10), poleMat);
+  pole.position.set(x, y + 0.18, z);
+  group.add(pole);
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), glowMat);
+  bulb.position.set(x, y + 0.4, z);
+  group.add(bulb);
+  const light = new THREE.PointLight(0xffd18a, 0.45, 1.4);
+  light.position.set(x, y + 0.42, z);
+  group.add(light);
+}
 
-  building.position.set(0, -0.1, 0);
-  scene.add(building);
-
-  const van = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.25, 0.25), new THREE.MeshStandardMaterial({ color: 0xffffff }));
-  van.position.set(1.1, -0.38, 0.4); scene.add(van);
-
+function createMediSyncCanvasFallback(canvas) {
+  const ctx = canvas.getContext("2d");
+  let frame = 0;
+  let animationFrame = 0;
   function resize() {
     const rect = canvas.getBoundingClientRect();
-    renderer.setSize(Math.max(1, rect.width), Math.max(1, rect.height), false);
-    camera.aspect = Math.max(1, rect.width) / Math.max(1, rect.height);
-    camera.updateProjectionMatrix();
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
-
-  let frame = 0;
-  function animate() {
+  function draw() {
+    const rect = canvas.getBoundingClientRect();
     frame += 1;
-    building.rotation.y = Math.sin(frame * 0.008) * 0.12;
-    renderer.render(scene, camera);
-    modal.__dioramaFrame = requestAnimationFrame(animate);
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    const gradient = ctx.createLinearGradient(0, 0, rect.width, rect.height);
+    gradient.addColorStop(0, "#07111f");
+    gradient.addColorStop(0.55, "#0d1c2d");
+    gradient.addColorStop(1, "#04070d");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    const cx = rect.width * 0.68;
+    const cy = rect.height * 0.58;
+    const s = Math.min(rect.width, rect.height) * 0.16;
+    ctx.save();
+    ctx.translate(cx, cy + Math.sin(frame * 0.02) * 4);
+    ctx.fillStyle = "#dfe6ef";
+    ctx.fillRect(-s * 2.2, -s * 1.7, s * 4.4, s * 2.4);
+    ctx.fillRect(-s * 2.8, -s * 2.25, s * 1.35, s * 2.95);
+    ctx.fillRect(s * 1.2, -s * 1.95, s * 1.6, s * 2.65);
+    ctx.fillStyle = "#1b78d8";
+    ctx.fillRect(-s * 0.7, -s * 1.55, s * 1.05, s * 2.25);
+    ctx.fillStyle = "#ffd996";
+    for (let row = 0; row < 5; row += 1) {
+      for (let col = 0; col < 12; col += 1) {
+        if ((row + col + frame) % 3 !== 0) ctx.fillRect(-s * 2.5 + col * s * 0.42, -s * 1.35 + row * s * 0.38, s * 0.18, s * 0.16);
+      }
+    }
+    ctx.fillStyle = "#d91f2d";
+    ctx.fillRect(-s * 0.7, s * 0.72, s * 1.48, s * 0.28);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "800 18px Inter, Arial";
+    ctx.fillText("EMERGENCY", -s * 0.58, s * 0.93);
+    ctx.strokeStyle = "#66bcff";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, -s * 1.95, s * 0.45, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    animationFrame = requestAnimationFrame(draw);
   }
-
-  window.addEventListener('resize', resize);
-  resize(); animate();
-
-  modal.__diorama = { renderer, scene, camera, canvas };
+  resize();
+  window.addEventListener("resize", resize);
+  draw();
+  return {
+    resize,
+    cancel() {
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", resize);
+    }
+  };
 }
 
 function destroyProjectDiorama(modal) {
   if (!modal || !modal.__diorama) return;
   if (modal.__dioramaFrame) cancelAnimationFrame(modal.__dioramaFrame);
+  try { if (modal.__diorama.cancel) modal.__diorama.cancel(); } catch (e) {}
+  try { if (modal.__diorama.resize) window.removeEventListener('resize', modal.__diorama.resize); } catch (e) {}
   try { if (modal.__diorama.renderer && typeof modal.__diorama.renderer.dispose === 'function') modal.__diorama.renderer.dispose(); } catch (e) {}
   try { modal.__diorama.canvas.remove(); } catch (e) {}
   delete modal.__diorama; delete modal.__dioramaFrame;

@@ -7,7 +7,7 @@
   <style>body{margin:0;background:#0a0f14;color:#fff}#info{position:fixed;left:12px;top:12px;font-family:Arial,Helvetica,sans-serif;background:rgba(0,0,0,0.4);padding:8px 10px;border-radius:6px}canvas{display:block}</style>
 </head>
 <body>
-  <div id="info">GLB test viewer — loading <span id="modelName">hospital-medisync.glb</span></div>
+  <div id="info">GLB test viewer — loading <span id="modelName">assets/models/hospital (2).glb</span></div>
   <canvas id="c"></canvas>
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
@@ -44,37 +44,31 @@
     resize();
 
     const loader = new GLTFLoader();
-    const modelCandidates = [
-      'assets/models/hospital-medisync.glb',
-      'assets/models/hospital (2).glb',
-      'assets/models/hospital-building-v2/hospital-building-v2.glb',
-      'assets/models/hospital.glb'
-    ];
+    const modelUrl = 'assets/models/hospital (2).glb';
 
-    async function tryLoadModels(list) {
-      const errors = [];
-      for (const p of list) {
-        document.getElementById('modelName').textContent = p;
-        console.log('[viewer] attempting to load', p);
-        try {
-          const gltf = await new Promise((resolve, reject) => loader.load(p, resolve, undefined, reject));
-          console.log('[viewer] loaded', p, gltf);
-          document.getElementById('info').textContent = 'Loaded: ' + p;
-          return gltf;
-        } catch (err) {
-          const msg = err && err.message ? err.message : String(err);
-          errors.push(`${p}: ${msg}`);
-          console.warn('[viewer] failed to load', p, msg);
-          // try next
-        }
+    async function loadBufferFirst(url) {
+      document.getElementById('modelName').textContent = url;
+      document.getElementById('info').textContent = 'GLB test viewer — preloading ' + url;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} while fetching ${url}`);
       }
-      const errText = errors.length ? errors.join(' | ') : 'none of the model candidates could be loaded';
-      throw new Error(errText);
+      const buffer = await response.arrayBuffer();
+      window.__viewerGLBBuffer = buffer;
+      window.__viewerGLBUrl = url;
+      return buffer;
     }
 
-    tryLoadModels(modelCandidates).then((gltf) => {
-      const root = gltf.scene || gltf.scenes[0];
-        // basic material tuning
+    async function parseBuffer(buffer, url) {
+      return await new Promise((resolve, reject) => {
+        loader.parse(buffer, '', (gltf) => resolve(gltf), reject);
+      }).then((gltf) => ({ gltf, url }));
+    }
+
+    loadBufferFirst(modelUrl)
+      .then(({ gltf, url }) => {
+        document.getElementById('info').textContent = 'Loaded: ' + url;
+        const root = gltf.scene || gltf.scenes[0];
         root.traverse((n) => {
           if (n.isMesh) {
             n.castShadow = true;
@@ -86,7 +80,6 @@
             }
           }
         });
-        // normalize scale
         const box = new THREE.Box3().setFromObject(root);
         const size = box.getSize(new THREE.Vector3());
         const maxDim = Math.max(size.x, size.y, size.z);
@@ -96,11 +89,12 @@
         }
         root.position.y = -0.9;
         scene.add(root);
-    }).catch((err) => {
-      console.error('All model loads failed', err);
-      document.getElementById('info').textContent = 'Failed to load any model — check console/network tab';
-      alert('Failed to load any model. See console for details.');
-    });
+      })
+      .catch((err) => {
+        console.error('Viewer load failed', err);
+        document.getElementById('info').textContent = 'Failed to load model — check console/network tab';
+        alert('Failed to load model. See console for details.');
+      });
 
     const clock = new THREE.Clock();
     function animate() {

@@ -932,7 +932,7 @@ function setupProjectModal() {
   const modal = document.getElementById("project-modal");
   const close = modal.querySelector(".modal-close");
 
-  function open(project) {
+  async function open(project) {
     modal.setAttribute("aria-hidden", "false");
     document.body.classList.add("no-scroll");
     modal.querySelector("#project-modal-title").textContent = project.title;
@@ -961,6 +961,8 @@ function setupProjectModal() {
       } catch (err) {
         if (shell) shell.classList.remove('fullscreen');
         delete modal.dataset.mode;
+        modal.setAttribute("aria-hidden", "false");
+        document.body.classList.add("no-scroll");
         console.warn('project diorama error', err);
       }
     } else {
@@ -1254,6 +1256,86 @@ function summarizePixelSamples(samples) {
   };
 }
 
+// Kick off a conservative global prefetch of the user's canonical MediSync GLB so
+// the modal can parse the buffer instantly when opened. This mirrors the
+// per-modal prefetch but starts earlier on page load to restore the prior
+// fast-open behavior for large files.
+if (!window.__hospitalGLBPromise) {
+  window.__hospitalGLBBuffer = null;
+  window.__hospitalGLBPromise = (async () => {
+    try {
+      console.log('[diorama] global prefetch starting', 'assets/models/hospital (2).glb');
+      const r = await fetch('assets/models/hospital (2).glb');
+      if (!r.ok) {
+        console.warn('[diorama] global prefetch returned', r.status);
+        return null;
+      }
+      const ab = await r.arrayBuffer();
+      window.__hospitalGLBBuffer = ab;
+      window.__hospitalGLBUrl = 'assets/models/hospital (2).glb';
+      console.log('[diorama] global prefetch complete bytes=', ab.byteLength);
+      return ab;
+    } catch (e) {
+      console.warn('[diorama] global prefetch failed', e);
+      return null;
+    }
+  })();
+}
+
+if (!window.__threeModulePromise) {
+  window.__threeModulePromise = import('three').then((m) => {
+    window.THREE = m;
+    return m;
+  }).catch((e) => {
+    console.warn('[diorama] three preload failed', e);
+    return null;
+  });
+}
+
+if (!window.__gltfLoaderPromise) {
+  window.__gltfLoaderPromise = import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js?module').then((m) => m?.GLTFLoader || m?.default || m).catch((e) => {
+    console.warn('[diorama] GLTFLoader preload failed', e);
+    return null;
+  });
+}
+
+if (!window.__orbitControlsPromise) {
+  window.__orbitControlsPromise = import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js?module').then((m) => m?.OrbitControls || m?.default || m).catch((e) => {
+    console.warn('[diorama] OrbitControls preload failed', e);
+    return null;
+  });
+}
+
+if (!window.__dioramaEffectsPromise) {
+  window.__dioramaEffectsPromise = Promise.all([
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/SSAOPass.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/BokehPass.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/ColorCorrectionShader.js?module'),
+    import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/VignetteShader.js?module')
+  ]).then((mods) => {
+    const [ec, rp, ub, ssao, sp, fxaa, bokeh, cc, vg] = mods;
+    return {
+      EffectComposer: ec?.EffectComposer || ec?.default || ec,
+      RenderPass: rp?.RenderPass || rp?.default || rp,
+      UnrealBloomPass: ub?.UnrealBloomPass || ub?.default || ub,
+      SSAOPass: ssao?.SSAOPass || ssao?.default || ssao,
+      ShaderPass: sp?.ShaderPass || sp?.default || sp,
+      FXAAShader: fxaa?.FXAAShader || fxaa?.default || fxaa,
+      BokehPass: bokeh?.BokehPass || bokeh?.default || bokeh,
+      ColorCorrectionShader: cc?.ColorCorrectionShader || cc?.default || cc,
+      VignetteShader: vg?.VignetteShader || vg?.default || vg
+    };
+  }).catch((e) => {
+    console.warn('[diorama] effects preload failed', e);
+    return null;
+  });
+}
+
 renderContent();
 bindInteractions();
 startVisualStage();
@@ -1385,27 +1467,30 @@ async function showProjectDiorama(project, modal) {
   }
 
   try {
-    let THREE = window.THREE || (await withTimeout(import('three'), 6000));
+    const THREE = window.THREE || (await window.__threeModulePromise) || (await withTimeout(import('three'), 6000));
     window.THREE = THREE;
 
-    const { GLTFLoader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js?module');
-    const { OrbitControls } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js?module');
+    const GLTFLoader = window.__gltfLoaderPromise ? await window.__gltfLoaderPromise : null;
+    const OrbitControls = window.__orbitControlsPromise ? await window.__orbitControlsPromise : null;
+    if (!GLTFLoader || !OrbitControls) {
+      throw new Error('GLTFLoader or OrbitControls failed to preload');
+    }
 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
-    // cap DPR to 1 for smoother loading on low-end GPUs / during heavy GLB parsing
-    const DPR = 1;
+    // keep the image crisp but avoid the heavy GPU cost of true 4K rendering
+    const DPR = Math.min(window.devicePixelRatio || 1, 1.25);
     renderer.setPixelRatio(DPR);
     renderer.physicallyCorrectLights = true;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = false;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setClearColor(0x000000, 0);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(28, 1, 0.05, 240);
-    camera.position.set(0, 1.6, 8);
+    camera.position.set(0, 1.5, 8);
 
     // create and add a procedural hospital exterior immediately so the modal shows
     // a hospital-like background instantly while GLBs load in the background.
@@ -1457,105 +1542,21 @@ async function showProjectDiorama(project, modal) {
       console.warn('[diorama] procedural hospital creation failed', e);
     }
 
-    scene.add(new THREE.HemisphereLight(0xf3f9ff, 0xc7d7e6, 1.35));
-    const dir = new THREE.DirectionalLight(0xffffff, 2.05);
-    dir.position.set(6, 11, 9);
+    scene.add(new THREE.HemisphereLight(0xf7fbff, 0xd7e4ef, 1.95));
+    const dir = new THREE.DirectionalLight(0xffffff, 2.8);
+    dir.position.set(8, 12, 10);
     scene.add(dir);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.72));
-
-    // attempt to provide a photographic environment for realistic PBR lighting
-    try {
-      const texLoader = new THREE.TextureLoader();
-      const envUrl = 'https://raw.githubusercontent.com/mrdoob/three.js/dev/examples/textures/equirectangular/venice_sunset_1k.jpg';
-      const envTex = await new Promise((resolve, reject) => texLoader.load(envUrl, resolve, undefined, reject));
-      envTex.mapping = THREE.EquirectangularReflectionMapping;
-      const pmrem = new THREE.PMREMGenerator(renderer);
-      pmrem.compileEquirectangularShader();
-      const envMap = pmrem.fromEquirectangular(envTex).texture;
-      scene.environment = envMap;
-      try { envTex.dispose && envTex.dispose(); } catch (e) {}
-      try { pmrem.dispose && pmrem.dispose(); } catch (e) {}
-    } catch (e) {
-      console.warn('[diorama] envmap load failed', e);
-    }
+    scene.add(new THREE.AmbientLight(0xffffff, 1.05));
+    const cursorLight = new THREE.PointLight(0xffc39f, 1.2, 42, 2);
+    cursorLight.position.set(0, 3.5, 10);
+    scene.add(cursorLight);
 
     const loader = new GLTFLoader();
-    // load optional helpers conservatively — if they fail, continue without them
     let ContactShadows = null;
     let SimplifyModifier = null;
-    try {
-      const cs = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/objects/ContactShadows.js?module');
-      ContactShadows = cs.ContactShadows;
-    } catch (e) {
-      console.warn('[diorama] ContactShadows import failed', e);
-    }
-    try {
-      const sm = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/modifiers/SimplifyModifier.js?module');
-      SimplifyModifier = sm.SimplifyModifier;
-    } catch (e) {
-      console.warn('[diorama] SimplifyModifier import failed', e);
-    }
-    // attempt to add postprocessing for photorealism
-    let composer, renderPass, bloomPass, ssaoPass, dofPass, colorPass, vignettePass;
-    try {
-      const { EffectComposer } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/EffectComposer.js?module');
-      const { RenderPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/RenderPass.js?module');
-      const { UnrealBloomPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/UnrealBloomPass.js?module');
-      const { SSAOPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/SSAOPass.js?module');
-      const { ShaderPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/ShaderPass.js?module');
-      const { FXAAShader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/FXAAShader.js?module');
-      const { BokehPass } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/postprocessing/BokehPass.js?module');
-      const { ColorCorrectionShader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/ColorCorrectionShader.js?module');
-      const { VignetteShader } = await import('https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/shaders/VignetteShader.js?module');
-      composer = new EffectComposer(renderer);
-      renderPass = new RenderPass(scene, camera);
-      composer.addPass(renderPass);
-      // FXAA
-      const fxaaPass = new ShaderPass(FXAAShader);
-      fxaaPass.material.uniforms['resolution'].value.set(1 / (window.innerWidth * DPR), 1 / (window.innerHeight * DPR));
-      // Bloom
-      bloomPass = new UnrealBloomPass(new THREE.Vector2(1024, 1024), 0.8, 0.45, 0.35);
-      bloomPass.threshold = 0.84;
-      bloomPass.strength = 0.55;
-      bloomPass.radius = 0.48;
-      // SSAO
-      ssaoPass = new SSAOPass(scene, camera, 1024, 1024);
-      ssaoPass.kernelRadius = 14;
-      ssaoPass.minDistance = 0.001;
-      ssaoPass.maxDistance = 0.03;
-      // DOF
-      dofPass = new BokehPass(scene, camera, {
-        focus: 1.65,
-        aperture: 0.000075,
-        maxblur: 0.008,
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
-      // color grading and vignette
-      colorPass = new ShaderPass(ColorCorrectionShader);
-      colorPass.uniforms.powRGB.value.set(0.98, 0.99, 1.02);
-      colorPass.uniforms.mulRGB.value.set(1.04, 1.03, 1.02);
-      colorPass.uniforms.addRGB.value.set(0.0, 0.0, 0.0);
-      vignettePass = new ShaderPass(VignetteShader);
-      vignettePass.uniforms.darkness.value = 1.15;
-      vignettePass.uniforms.offset.value = 1.0;
-      composer.addPass(bloomPass);
-      composer.addPass(ssaoPass);
-      composer.addPass(dofPass);
-      composer.addPass(colorPass);
-      composer.addPass(vignettePass);
-      composer.addPass(fxaaPass);
-    } catch (e) {
-      console.warn('postprocessing not available', e);
-    }
+    // Use the user's canonical MediSync model only
     const MODEL_URLS = [
-      'assets/models/hospital (2).glb',
-      // safe, no-spaces copy kept as a fallback only
-      'assets/models/hospital-medisync.glb',
-      'assets/models/hospital-building-v2/hospital-building-v2.glb',
-      'assets/models/hospital.glb',
-      'assets/models/hospital-realistic.glb',
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb'
+      'assets/models/hospital (2).glb'
     ];
     try {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1629,7 +1630,7 @@ async function showProjectDiorama(project, modal) {
       try {
         const lowDetail = model.clone(true);
         lowDetail.traverse((n) => {
-          if (n.isMesh && n.geometry) {
+          if (n.isMesh && n.geometry && SimplifyModifier) {
             try {
               const modifier = new SimplifyModifier();
               const geometry = n.geometry.clone();
@@ -1659,6 +1660,7 @@ async function showProjectDiorama(project, modal) {
       scene.fog = new THREE.Fog(0xd7e6f2, 16, 46);
 
       try {
+        if (ContactShadows) {
         const contactShadows = new ContactShadows({
           renderer,
           scene,
@@ -1673,6 +1675,7 @@ async function showProjectDiorama(project, modal) {
         contactShadows.rotation.x = -Math.PI / 2;
         contactShadows.visible = true;
         scene.add(contactShadows);
+        }
       } catch (e) {
         console.warn('[diorama] contact shadows failed', e);
       }
@@ -1723,7 +1726,8 @@ async function showProjectDiorama(project, modal) {
     const fitSize = fitBox.getSize(new THREE.Vector3());
     const fitMax = Math.max(fitSize.x, fitSize.y, fitSize.z);
     if (fitMax > 0) {
-      const targetMax = 10.5;
+      // increase the target so medium-sized assets appear more prominent in the modal
+      const targetMax = 8.5;
       const fitScale = targetMax / fitMax;
       // Always normalize model scale so very small or very large assets are framed consistently.
       if (fitScale > 0 && Number.isFinite(fitScale)) {
@@ -1739,16 +1743,17 @@ async function showProjectDiorama(project, modal) {
     model.position.sub(center);
     const maxDim = Math.max(size.x, size.y, size.z);
     const fov = (camera.fov * Math.PI) / 180;
-    const camZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 0.9;
-    camera.position.set(maxDim * 0.04, Math.max(1.7, size.y * 0.46), camZ * 0.88);
+    const camZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 0.66;
+    // keep the model smaller in frame so the full building is visible on first load
+    camera.position.set(maxDim * 0.01, Math.max(1.3, size.y * 0.42), camZ * 0.36);
     camera.lookAt(0, size.y * 0.16, 0);
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enablePan = false;
     controls.enableZoom = false;
-    controls.autoRotate = true;
+    controls.autoRotate = false;
     controls.enableDamping = true;
-    controls.target.set(0, size.y * 0.16, 0);
+    controls.target.set(0, size.y * 0.12, 0);
 
     const modelRig = new THREE.Group();
     modelRig.add(model);
@@ -1773,7 +1778,7 @@ async function showProjectDiorama(project, modal) {
     };
     // pointer handling attached to the diorama canvas for correct local coordinates
     // and to avoid interference from other page-level pointer listeners.
-    const pointerTarget = canvas || renderer.domElement;
+    const pointerTarget = shell || canvas || renderer.domElement;
     try {
       pointerTarget.style.touchAction = pointerTarget.style.touchAction || 'none';
     } catch (e) {}
@@ -1810,6 +1815,58 @@ async function showProjectDiorama(project, modal) {
     } catch (e) {}
     model.add(label);
 
+    let composer = null;
+    let bloomPass = null;
+    let ssaoPass = null;
+    let dofPass = null;
+    let colorPass = null;
+    let vignettePass = null;
+    let fxaaPass = null;
+    window.__dioramaEffectsPromise.then((effects) => {
+      if (!effects || !modal.__diorama || modal.__diorama.cancelled) return;
+      try {
+        const { EffectComposer, RenderPass, UnrealBloomPass, SSAOPass, ShaderPass, FXAAShader, BokehPass, ColorCorrectionShader, VignetteShader } = effects;
+        if (!EffectComposer || !RenderPass || !ShaderPass) return;
+        composer = new EffectComposer(renderer);
+        composer.addPass(new RenderPass(scene, camera));
+        fxaaPass = new ShaderPass(FXAAShader);
+        fxaaPass.material.uniforms['resolution'].value.set(1 / (window.innerWidth * DPR), 1 / (window.innerHeight * DPR));
+        const effectWidth = Math.max(320, Math.floor(window.innerWidth * DPR * 0.75));
+        const effectHeight = Math.max(240, Math.floor(window.innerHeight * DPR * 0.75));
+        bloomPass = new UnrealBloomPass(new THREE.Vector2(effectWidth, effectHeight), 0.45, 0.22, 0.14);
+        bloomPass.threshold = 0.9;
+        bloomPass.strength = 0.16;
+        bloomPass.radius = 0.12;
+        ssaoPass = new SSAOPass(scene, camera, effectWidth, effectHeight);
+        ssaoPass.kernelRadius = 6;
+        ssaoPass.minDistance = 0.001;
+        ssaoPass.maxDistance = 0.03;
+        dofPass = new BokehPass(scene, camera, {
+          focus: 1.6,
+          aperture: 0.00001,
+          maxblur: 0.0012,
+          width: window.innerWidth,
+          height: window.innerHeight
+        });
+        colorPass = new ShaderPass(ColorCorrectionShader);
+        colorPass.uniforms.powRGB.value.set(0.98, 0.99, 1.02);
+        colorPass.uniforms.mulRGB.value.set(1.03, 1.02, 1.01);
+        colorPass.uniforms.addRGB.value.set(0.0, 0.0, 0.0);
+        vignettePass = new ShaderPass(VignetteShader);
+        vignettePass.uniforms.darkness.value = 1.08;
+        vignettePass.uniforms.offset.value = 1.0;
+        composer.addPass(bloomPass);
+        composer.addPass(ssaoPass);
+        composer.addPass(dofPass);
+        composer.addPass(colorPass);
+        composer.addPass(vignettePass);
+        composer.addPass(fxaaPass);
+        modal.__diorama.composer = composer;
+      } catch (e) {
+        console.warn('[diorama] effects setup failed', e);
+      }
+    });
+
     function resize() {
       const rect = canvas.getBoundingClientRect();
       const width = Math.max(1, Math.floor(rect.width));
@@ -1828,21 +1885,27 @@ async function showProjectDiorama(project, modal) {
     const tick = () => {
       const delta = Math.min(clock.getDelta(), 0.05);
       // tuned damping for a responsive but stable feel
-      cursor.x = THREE.MathUtils.damp(cursor.x, cursor.tx, 6, delta);
-      cursor.y = THREE.MathUtils.damp(cursor.y, cursor.ty, 6, delta);
+      cursor.x = THREE.MathUtils.damp(cursor.x, cursor.tx, 7.5, delta);
+      cursor.y = THREE.MathUtils.damp(cursor.y, cursor.ty, 7.5, delta);
 
-      // reduced amplitude so small pointer moves feel natural and not jittery
-      modelRig.rotation.y = cursor.x * 0.35;
-      modelRig.rotation.x = -cursor.y * 0.12;
-      modelRig.position.x = cursor.x * 0.5;
-      modelRig.position.y = cursor.y * 0.25;
-      modelRig.position.z = Math.sin(performance.now() * 0.0005) * 0.06;
+      // slightly stronger motion so cursor interaction is obvious but still stable
+      modelRig.rotation.y = cursor.x * 0.42;
+      modelRig.rotation.x = -cursor.y * 0.14;
+      modelRig.position.x = cursor.x * 0.28;
+      modelRig.position.y = cursor.y * 0.18;
+      modelRig.position.z = Math.sin(performance.now() * 0.00045) * 0.08;
+      if (cursorLight) {
+        cursorLight.position.x = cursor.x * 9.5;
+        cursorLight.position.y = Math.max(1.9, size.y * 0.45) + cursor.y * 2.6;
+        cursorLight.position.z = 10 + cursor.x * 4.5;
+      }
 
-      camera.position.x = THREE.MathUtils.damp(camera.position.x, maxDim * 0.04 + cursor.x * 0.35, 6, delta);
-      camera.position.y = THREE.MathUtils.damp(camera.position.y, Math.max(1.7, size.y * 0.46) + cursor.y * 0.22, 6, delta);
+      camera.position.x = THREE.MathUtils.damp(camera.position.x, maxDim * 0.01 + cursor.x * 0.16, 6, delta);
+      camera.position.y = THREE.MathUtils.damp(camera.position.y, Math.max(1.25, size.y * 0.42) + cursor.y * 0.14, 6, delta);
       camera.lookAt(0, size.y * 0.16, 0);
       controls.update();
       if (composer) {
+        if (fxaaPass) fxaaPass.material.uniforms['resolution'].value.set(1 / (window.innerWidth * DPR), 1 / (window.innerHeight * DPR));
         composer.render();
       } else {
         renderer.render(scene, camera);
@@ -1861,7 +1924,9 @@ async function showProjectDiorama(project, modal) {
       status: modal.__diorama.status,
       // expose pointerTarget so cleanup can remove listeners reliably
       _pointerTarget: pointerTarget,
+      cancelled: false,
       cancel() {
+        this.cancelled = true;
         cancelAnimationFrame(raf);
         try {
           window.removeEventListener('resize', resize);

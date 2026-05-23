@@ -1374,7 +1374,9 @@ function revealSections() {
   const sections = $$('section');
   const obs = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      if (entry.isIntersecting) entry.target.classList.add('is-visible');
+      if (entry.isIntersecting || entry.target.classList.contains('marquee-band')) {
+        entry.target.classList.add('is-visible');
+      }
     });
   }, { threshold: 0.12 });
   sections.forEach((s) => obs.observe(s));

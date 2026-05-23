@@ -615,11 +615,21 @@ section {
 }
 
 .marquee-band {
-  background: var(--ink);
-  border-top: 1px solid rgba(255, 250, 240, 0.1);
-  border-bottom: 1px solid rgba(255, 250, 240, 0.1);
+  background: linear-gradient(90deg, #0f0d0a, #1a1712 52%, #0f0d0a) !important;
+  border-top: 1px solid rgba(255, 250, 240, 0.14);
+  border-bottom: 1px solid rgba(255, 250, 240, 0.14);
   overflow: hidden;
   padding: 0.95rem 0;
+  isolation: isolate;
+  opacity: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+section.marquee-band,
+section.marquee-band.is-visible {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
 }
 
 .marquee-track {
@@ -630,11 +640,23 @@ section {
 }
 
 .marquee-track span {
-  color: rgba(255, 250, 240, 0.84);
+  color: #fffdf7 !important;
   font-size: 0.84rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.62), 0 0 8px rgba(255, 255, 255, 0.08);
+  -webkit-text-stroke: 0.2px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="night"] .marquee-band {
+  background: linear-gradient(90deg, #0f0d0a, #1a1712 52%, #0f0d0a) !important;
+  border-top-color: rgba(255, 250, 240, 0.12);
+  border-bottom-color: rgba(255, 250, 240, 0.12);
+}
+
+:root[data-theme="night"] .marquee-track span {
+  color: #fffdf7 !important;
 }
 
 @keyframes marquee {

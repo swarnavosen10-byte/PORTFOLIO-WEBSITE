@@ -1817,50 +1817,32 @@ async function showProjectDiorama(project, modal) {
 
     let composer = null;
     let bloomPass = null;
-    let ssaoPass = null;
-    let dofPass = null;
     let colorPass = null;
     let vignettePass = null;
     let fxaaPass = null;
     window.__dioramaEffectsPromise.then((effects) => {
       if (!effects || !modal.__diorama || modal.__diorama.cancelled) return;
       try {
-        const { EffectComposer, RenderPass, UnrealBloomPass, SSAOPass, ShaderPass, FXAAShader, BokehPass, ColorCorrectionShader, VignetteShader } = effects;
+        const { EffectComposer, RenderPass, UnrealBloomPass, ShaderPass, ColorCorrectionShader, VignetteShader } = effects;
         if (!EffectComposer || !RenderPass || !ShaderPass) return;
         composer = new EffectComposer(renderer);
         composer.addPass(new RenderPass(scene, camera));
-        fxaaPass = new ShaderPass(FXAAShader);
-        fxaaPass.material.uniforms['resolution'].value.set(1 / (window.innerWidth * DPR), 1 / (window.innerHeight * DPR));
-        const effectWidth = Math.max(320, Math.floor(window.innerWidth * DPR * 0.75));
-        const effectHeight = Math.max(240, Math.floor(window.innerHeight * DPR * 0.75));
-        bloomPass = new UnrealBloomPass(new THREE.Vector2(effectWidth, effectHeight), 0.45, 0.22, 0.14);
-        bloomPass.threshold = 0.9;
-        bloomPass.strength = 0.16;
-        bloomPass.radius = 0.12;
-        ssaoPass = new SSAOPass(scene, camera, effectWidth, effectHeight);
-        ssaoPass.kernelRadius = 6;
-        ssaoPass.minDistance = 0.001;
-        ssaoPass.maxDistance = 0.03;
-        dofPass = new BokehPass(scene, camera, {
-          focus: 1.6,
-          aperture: 0.00001,
-          maxblur: 0.0012,
-          width: window.innerWidth,
-          height: window.innerHeight
-        });
+        const effectWidth = Math.max(320, Math.floor(window.innerWidth * DPR * 0.55));
+        const effectHeight = Math.max(240, Math.floor(window.innerHeight * DPR * 0.55));
+        bloomPass = new UnrealBloomPass(new THREE.Vector2(effectWidth, effectHeight), 0.25, 0.12, 0.08);
+        bloomPass.threshold = 0.94;
+        bloomPass.strength = 0.08;
+        bloomPass.radius = 0.08;
         colorPass = new ShaderPass(ColorCorrectionShader);
-        colorPass.uniforms.powRGB.value.set(0.98, 0.99, 1.02);
-        colorPass.uniforms.mulRGB.value.set(1.03, 1.02, 1.01);
+        colorPass.uniforms.powRGB.value.set(1.0, 1.0, 1.0);
+        colorPass.uniforms.mulRGB.value.set(1.02, 1.01, 1.01);
         colorPass.uniforms.addRGB.value.set(0.0, 0.0, 0.0);
         vignettePass = new ShaderPass(VignetteShader);
-        vignettePass.uniforms.darkness.value = 1.08;
+        vignettePass.uniforms.darkness.value = 1.03;
         vignettePass.uniforms.offset.value = 1.0;
         composer.addPass(bloomPass);
-        composer.addPass(ssaoPass);
-        composer.addPass(dofPass);
         composer.addPass(colorPass);
         composer.addPass(vignettePass);
-        composer.addPass(fxaaPass);
         modal.__diorama.composer = composer;
       } catch (e) {
         console.warn('[diorama] effects setup failed', e);

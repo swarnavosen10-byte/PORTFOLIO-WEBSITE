@@ -44,12 +44,32 @@
     resize();
 
     const loader = new GLTFLoader();
-    const modelPath = 'assets/models/hospital-medisync.glb';
-    document.getElementById('modelName').textContent = modelPath;
+    const modelCandidates = [
+      'assets/models/hospital-medisync.glb',
+      'assets/models/hospital (2).glb',
+      'assets/models/hospital-building-v2/hospital-building-v2.glb',
+      'assets/models/hospital.glb'
+    ];
 
-    loader.load(modelPath,
-      (gltf) => {
-        const root = gltf.scene || gltf.scenes[0];
+    async function tryLoadModels(list) {
+      for (const p of list) {
+        document.getElementById('modelName').textContent = p;
+        console.log('[viewer] attempting to load', p);
+        try {
+          const gltf = await new Promise((resolve, reject) => loader.load(p, resolve, undefined, reject));
+          console.log('[viewer] loaded', p, gltf);
+          document.getElementById('info').textContent = 'Loaded: ' + p;
+          return gltf;
+        } catch (err) {
+          console.warn('[viewer] failed to load', p, err && err.message ? err.message : err);
+          // try next
+        }
+      }
+      throw new Error('none of the model candidates could be loaded');
+    }
+
+    tryLoadModels(modelCandidates).then((gltf) => {
+      const root = gltf.scene || gltf.scenes[0];
         // basic material tuning
         root.traverse((n) => {
           if (n.isMesh) {
@@ -72,15 +92,11 @@
         }
         root.position.y = -0.9;
         scene.add(root);
-      },
-      (xhr) => {
-        // progress
-      },
-      (err) => {
-        console.error('GLTF load error', err);
-        alert('Failed to load model: ' + err.message);
-      }
-    );
+    }).catch((err) => {
+      console.error('All model loads failed', err);
+      document.getElementById('info').textContent = 'Failed to load any model — check console/network tab';
+      alert('Failed to load any model. See console for details.');
+    });
 
     const clock = new THREE.Clock();
     function animate() {

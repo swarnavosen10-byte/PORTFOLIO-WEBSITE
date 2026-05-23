@@ -1536,6 +1536,8 @@ async function showProjectDiorama(project, modal) {
       console.warn('postprocessing not available', e);
     }
     const MODEL_URLS = [
+      // safe, no-spaces copy created for reliable loading
+      'assets/models/hospital-medisync.glb',
       'assets/models/hospital (2).glb',
       'assets/models/hospital-building-v2/hospital-building-v2.glb',
       'assets/models/hospital.glb',
@@ -1710,7 +1712,8 @@ async function showProjectDiorama(project, modal) {
     if (fitMax > 0) {
       const targetMax = 10.5;
       const fitScale = targetMax / fitMax;
-      if (fitScale > 0 && fitScale < 1) {
+      // Always normalize model scale so very small or very large assets are framed consistently.
+      if (fitScale > 0 && Number.isFinite(fitScale)) {
         model.scale.multiplyScalar(fitScale);
         model.updateMatrixWorld(true);
       }
@@ -1755,10 +1758,15 @@ async function showProjectDiorama(project, modal) {
       cursor.ty = 0;
       try { controls.autoRotate = true; } catch (e) {}
     };
-    // global pointer handling so movement works even if canvas is partially covered
-    window.addEventListener('pointermove', updateCursor, { passive: true });
-    window.addEventListener('pointerout', resetCursor);
-    window.addEventListener('pointercancel', resetCursor);
+    // pointer handling attached to the diorama canvas for correct local coordinates
+    // and to avoid interference from other page-level pointer listeners.
+    const pointerTarget = canvas || renderer.domElement;
+    try {
+      pointerTarget.style.touchAction = pointerTarget.style.touchAction || 'none';
+    } catch (e) {}
+    pointerTarget.addEventListener('pointermove', updateCursor, { passive: true });
+    pointerTarget.addEventListener('pointerleave', resetCursor);
+    pointerTarget.addEventListener('pointercancel', resetCursor);
 
     const label = createTextPlane(
       THREE,
@@ -1806,14 +1814,15 @@ async function showProjectDiorama(project, modal) {
     const clock = new THREE.Clock();
     const tick = () => {
       const delta = Math.min(clock.getDelta(), 0.05);
-      // stronger damping for snappier response; lower for smoother
-      cursor.x = THREE.MathUtils.damp(cursor.x, cursor.tx, 10, delta);
-      cursor.y = THREE.MathUtils.damp(cursor.y, cursor.ty, 10, delta);
+      // tuned damping for a responsive but stable feel
+      cursor.x = THREE.MathUtils.damp(cursor.x, cursor.tx, 6, delta);
+      cursor.y = THREE.MathUtils.damp(cursor.y, cursor.ty, 6, delta);
 
-      modelRig.rotation.y = cursor.x * 0.5;
-      modelRig.rotation.x = -cursor.y * 0.16;
-      modelRig.position.x = cursor.x * 0.7;
-      modelRig.position.y = cursor.y * 0.35;
+      // reduced amplitude so small pointer moves feel natural and not jittery
+      modelRig.rotation.y = cursor.x * 0.35;
+      modelRig.rotation.x = -cursor.y * 0.12;
+      modelRig.position.x = cursor.x * 0.5;
+      modelRig.position.y = cursor.y * 0.25;
       modelRig.position.z = Math.sin(performance.now() * 0.0005) * 0.06;
 
       camera.position.x = THREE.MathUtils.damp(camera.position.x, maxDim * 0.04 + cursor.x * 0.35, 6, delta);
@@ -1837,23 +1846,20 @@ async function showProjectDiorama(project, modal) {
       controls,
       composer,
       status: modal.__diorama.status,
+      // expose pointerTarget so cleanup can remove listeners reliably
+      _pointerTarget: pointerTarget,
       cancel() {
         cancelAnimationFrame(raf);
         try {
           window.removeEventListener('resize', resize);
         } catch (e) {}
-          try {
-            window.removeEventListener('pointermove', updateCursor);
-            window.removeEventListener('pointerout', resetCursor);
-            window.removeEventListener('pointercancel', resetCursor);
-          } catch (e) {}
-          try {
-            const pointerTarget = modal.querySelector('.project-modal-shell') || modal;
-            if (pointerTarget && pointerTarget.removeEventListener) {
-              pointerTarget.removeEventListener('pointermove', updateCursor);
-              pointerTarget.removeEventListener('pointerleave', resetCursor);
-            }
-          } catch (e) {}
+        try {
+          if (pointerTarget && pointerTarget.removeEventListener) {
+            pointerTarget.removeEventListener('pointermove', updateCursor);
+            pointerTarget.removeEventListener('pointerleave', resetCursor);
+            pointerTarget.removeEventListener('pointercancel', resetCursor);
+          }
+        } catch (e) {}
         try {
           if (composer && typeof composer.dispose === 'function') composer.dispose();
         } catch (e) {}

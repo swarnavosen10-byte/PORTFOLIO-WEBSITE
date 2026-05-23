@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GLB Test Viewer</title>
+  <style>body{margin:0;background:#0a0f14;color:#fff}#info{position:fixed;left:12px;top:12px;font-family:Arial,Helvetica,sans-serif;background:rgba(0,0,0,0.4);padding:8px 10px;border-radius:6px}canvas{display:block}</style>
+</head>
+<body>
+  <div id="info">GLB test viewer — loading <span id="modelName">hospital-medisync.glb</span></div>
+  <canvas id="c"></canvas>
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js?module';
+    import { OrbitControls } from 'https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js?module';
+
+    const canvas = document.getElementById('c');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x0a1118, 1);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, 2, 0.01, 2000);
+    camera.position.set(0, 1.6, 8);
+
+    const hemi = new THREE.HemisphereLight(0xf3f9ff, 0xc7d7e6, 0.9);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+    dir.position.set(6, 10, 6);
+    scene.add(dir);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 1, 0);
+    controls.update();
+
+    function resize() {
+      const w = Math.max(300, innerWidth);
+      const h = Math.max(300, innerHeight);
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const loader = new GLTFLoader();
+    const modelPath = 'assets/models/hospital-medisync.glb';
+    document.getElementById('modelName').textContent = modelPath;
+
+    loader.load(modelPath,
+      (gltf) => {
+        const root = gltf.scene || gltf.scenes[0];
+        // basic material tuning
+        root.traverse((n) => {
+          if (n.isMesh) {
+            n.castShadow = true;
+            n.receiveShadow = true;
+            if (n.material && !Array.isArray(n.material)) {
+              n.material.metalness = n.material.metalness ?? 0.2;
+              n.material.roughness = n.material.roughness ?? 0.6;
+              n.material.needsUpdate = true;
+            }
+          }
+        });
+        // normalize scale
+        const box = new THREE.Box3().setFromObject(root);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim > 0) {
+          const scale = 4.5 / maxDim;
+          root.scale.multiplyScalar(scale);
+        }
+        root.position.y = -0.9;
+        scene.add(root);
+      },
+      (xhr) => {
+        // progress
+      },
+      (err) => {
+        console.error('GLTF load error', err);
+        alert('Failed to load model: ' + err.message);
+      }
+    );
+
+    const clock = new THREE.Clock();
+    function animate() {
+      const dt = clock.getDelta();
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>

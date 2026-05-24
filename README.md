@@ -1,76 +1,45 @@
-# Swarnavo Sen Portfolio
+# Swarnavo Sen — Portfolio
 
-An interactive, single-page portfolio with a cinematic 3D command-station hero, project filters, GitHub orbit, animated case-study cards, responsive sections, theme switching, and editable content.
+Professional single-page portfolio showcasing selected projects and interactive 3D visuals.
 
-The project section is based on the showcase repositories from `https://github.com/swarnavosen10-byte`. The deployment repository for this site is intentionally excluded from the portfolio gallery.
+Live: https://swarnavosen10-byte.github.io/PORTFOLIO-WEBSITE/
 
-## Open It
+## Summary
+This repository contains a static portfolio site built with HTML, CSS and JavaScript. It features a Three.js-powered hero visual and a GLB-based project diorama (MediSync).
 
-Open `index.html` in a browser. No build step is required.
+## Key features
+- Cinematic Three.js hero and GLB project diorama
+- Curated project cards and case-study dioramas
+- Responsive layout with light/dark theme support
+- Simple content model: edit the `portfolio` object in `main.js`
 
-The hero uses Three.js from `unpkg.com`. If that network import is blocked, the site automatically falls back to an animated canvas visual.
+## Tech
+- Vanilla HTML/CSS/JavaScript
+- Three.js (GLTF/GLB model viewer)
+
+## Quick preview
+Serve the repository locally and open the site:
+
+```bash
+python -m http.server 8000
+# open http://localhost:8000
+```
 
 ## Customize
+- Edit the `portfolio` object in `main.js` to update name, bio, projects, and links.
+- Place a custom `.glb` file in `assets/models/` to use a different model in the MediSync project.
 
-Edit the `portfolio` object at the top of `main.js`:
+## Deploy (GitHub Pages)
+1. Create a GitHub repository and push this project.
+2. In the repository Settings > Pages, select the `main` branch (root) or `gh-pages` branch to publish.
 
-- `name`, `role`, `email`, `location`, and `status`
-- `highlights`
-- `projects`
-- `range`
-- `process`
+## Contact
+- Owner: Swarnavo Sen
+- Email: swarnavosen10@gmail.com
 
-## Deploy & Preview
+## License
+No license file is included. Add a `LICENSE` if you wish to permit reuse.
 
-Preview locally using a simple static server (Python):
+---
 
-```bash
-python -m http.server 8000
-# then open http://localhost:8000
-```
-
-## 3D Model (MediSync modal)
-
-The MediSync project modal loads a realistic GLB model when opened. By default the site will try these locations in order:
-
-- `assets/models/hospital.glb` (recommended: drop your hospital GLB here)
-- DamagedHelmet (high-fidelity PBR sample)
-- Marketplace or FlightHelmet (fallback samples)
-
-To test locally:
-
-```bash
-python -m http.server 8000
-# open http://localhost:8000 and click the MediSync card
-```
-
-If you have a custom `.glb`, place it at `assets/models/hospital.glb`. The loader will prefer that file first. If you want me to add a specific hospital GLB into the repo, upload it or tell me the URL and I'll add it and tune camera/lighting.
-
-Deploy options:
-
-- GitHub Pages: push the repository to GitHub and enable Pages from the `main` branch (or `gh-pages`).
-- Vercel: import the repo at vercel.com and deploy; Vercel serves static sites automatically.
-
-If you want, I can prepare a `package.json` with a `start` script, or create a `deploy` branch and publish to GitHub Pages for you.
-
-## Push to GitHub & Auto-deploy
-
-1. Create a new repository on GitHub (for example `swarnavo-portfolio`).
-2. Push your local project to GitHub:
-
-```bash
-git init
-git add .
-git commit -m "Initial portfolio"
-git branch -M main
-git remote add origin https://github.com/<your-username>/<your-repo>.git
-git push -u origin main
-```
-
-3. The repository includes a GitHub Actions workflow to publish the site to the `gh-pages` branch whenever you push to `main`.
-
-Notes:
-- Make sure GitHub Actions is enabled for your account/repo. The workflow uses the built-in `GITHUB_TOKEN` to publish.
-- If you prefer Vercel or Netlify, import the repo there and they will deploy automatically.
-
-Keep real project outcomes specific: launch metrics, users served, revenue influenced, speed improvements, uptime, or before and after workflow time.
+If you want a shorter README, platform-specific badges, or an automated publish workflow added, tell me and I will add it.

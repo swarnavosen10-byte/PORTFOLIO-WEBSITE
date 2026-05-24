@@ -41,5 +41,3 @@ python -m http.server 8000
 No license file is included. Add a `LICENSE` if you wish to permit reuse.
 
 ---
-
-If you want a shorter README, platform-specific badges, or an automated publish workflow added, tell me and I will add it.

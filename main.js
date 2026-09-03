@@ -144,14 +144,14 @@ const ENABLE_PROJECT_DIORAMA = true;
   try {
     const existing = document.getElementById('project-diorama');
     if (existing) existing.remove();
-  } catch (e) {}
+  } catch (e) { }
   try {
     const modal = document.getElementById('project-modal');
     if (modal) {
       const shell = modal.querySelector('.project-modal-shell');
       if (shell && shell.classList.contains('fullscreen')) shell.classList.remove('fullscreen');
     }
-  } catch (e) {}
+  } catch (e) { }
 })();
 
 const preloader = document.getElementById("preloader");
@@ -258,10 +258,10 @@ function renderProjects(filter) {
   const projects = filter === "All" ? portfolio.projects : portfolio.projects.filter((project) => project.category === filter);
   const projectGrid = $("[data-projects]");
 
-    projectGrid.innerHTML = projects
-      .map((project) => {
-        const imgSrc = `screenshots/${getProjectArtworkSlug(project)}.svg`;
-        return `
+  projectGrid.innerHTML = projects
+    .map((project) => {
+      const imgSrc = `screenshots/${getProjectArtworkSlug(project)}.svg`;
+      return `
           <article class="project-card ${project.featured ? "featured" : ""}">
             <div class="project-body">
               <div class="project-number">${String(portfolio.projects.indexOf(project) + 1).padStart(2, "0")}</div>
@@ -275,11 +275,10 @@ function renderProjects(filter) {
                 ${project.tags.map((tag) => `<span>${tag}</span>`).join("")}
               </div>
               <div class="project-links" aria-label="${project.title} links">
-                ${
-                  project.title === "MediSync Hospital Management"
-                    ? `<button class="project-overview-button" type="button" data-project-overview="${project.title}">Overview</button>`
-                    : ""
-                }
+                ${project.title === "MediSync Hospital Management"
+          ? `<button class="project-overview-button" type="button" data-project-overview="${project.title}">Overview</button>`
+          : ""
+        }
                 ${project.repoUrl ? `<a href="${project.repoUrl}" target="_blank" rel="noreferrer">GitHub</a>` : ""}
                 ${project.liveUrl ? `<a href="${project.liveUrl}" target="_blank" rel="noreferrer">Live demo</a>` : ""}
               </div>
@@ -294,9 +293,9 @@ function renderProjects(filter) {
             </div>
           </article>
         `;
-      })
-      .join("");
-  }
+    })
+    .join("");
+}
 
 function slugify(text) {
   return String(text)
@@ -1339,6 +1338,7 @@ if (!window.__dioramaEffectsPromise) {
 renderContent();
 bindInteractions();
 startVisualStage();
+startPortfolioRoom();
 enhanceProjectCards();
 setupProjectModal();
 startCursorTrail();
@@ -1435,7 +1435,7 @@ async function showProjectDiorama(project, modal) {
     shell.style.backgroundPosition = 'center center';
     shell.style.backgroundRepeat = 'no-repeat';
     shell.style.backgroundColor = '#0a1118';
-  } catch (e) {}
+  } catch (e) { }
   modal.__diorama = { canvas, status };
 
   // Start prefetch on page load (if not already started). This will fetch and cache
@@ -1564,7 +1564,7 @@ async function showProjectDiorama(project, modal) {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.15;
       renderer.outputEncoding = THREE.sRGBEncoding;
-    } catch (e) {}
+    } catch (e) { }
 
     let gltf = null;
     let loadedModelKind = null;
@@ -1649,7 +1649,7 @@ async function showProjectDiorama(project, modal) {
                 n.material.metalness = Math.min(0.4, (n.material.metalness ?? 0.15) * 0.6);
                 n.material.envMapIntensity = Math.min(0.8, (n.material.envMapIntensity ?? 1) * 0.72);
               }
-            } catch (e) {}
+            } catch (e) { }
           }
         });
         lod.addLevel(lowDetail, 52);
@@ -1663,20 +1663,20 @@ async function showProjectDiorama(project, modal) {
 
       try {
         if (ContactShadows) {
-        const contactShadows = new ContactShadows({
-          renderer,
-          scene,
-          mesh: lod,
-          camera,
-          opacity: 0.72,
-          scale: 12,
-          blur: 2.8,
-          far: 10
-        });
-        contactShadows.position.set(0, -1.92, 0);
-        contactShadows.rotation.x = -Math.PI / 2;
-        contactShadows.visible = true;
-        scene.add(contactShadows);
+          const contactShadows = new ContactShadows({
+            renderer,
+            scene,
+            mesh: lod,
+            camera,
+            opacity: 0.72,
+            scale: 12,
+            blur: 2.8,
+            far: 10
+          });
+          contactShadows.position.set(0, -1.92, 0);
+          contactShadows.rotation.x = -Math.PI / 2;
+          contactShadows.visible = true;
+          scene.add(contactShadows);
         }
       } catch (e) {
         console.warn('[diorama] contact shadows failed', e);
@@ -1694,11 +1694,11 @@ async function showProjectDiorama(project, modal) {
               }
             }
           });
-        } catch (e) {}
-        try { scene.remove(proceduralHospital); } catch (e) {}
+        } catch (e) { }
+        try { scene.remove(proceduralHospital); } catch (e) { }
         proceduralHospital = null;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     if (!model) {
       console.warn('[diorama] no GLB model could be loaded — keeping the subtle procedural fallback');
@@ -1706,21 +1706,21 @@ async function showProjectDiorama(project, modal) {
     }
 
     // make the canvas visible now that the model is present
-    try { canvas.style.opacity = '0.96'; } catch(e){}
+    try { canvas.style.opacity = '0.96'; } catch (e) { }
     // remove any CSS diorama elements so the GL canvas is visible
     try {
       const shellEl = shell || modal.querySelector('.project-modal-shell');
       if (shellEl) {
         shellEl.querySelectorAll('.medisync-photo-render, .medisync-3d-scene').forEach((el) => {
-          try { el.remove(); } catch (e) {}
+          try { el.remove(); } catch (e) { }
         });
       }
-    } catch (e) {}
+    } catch (e) { }
     // hide status after successful add
     if (modal.__diorama && modal.__diorama.status) {
       modal.__diorama.status.textContent = '3D: ready';
       modal.__diorama.status.style.opacity = '0';
-      window.setTimeout(() => { try { modal.__diorama.status.remove(); } catch (e) {} }, 900);
+      window.setTimeout(() => { try { modal.__diorama.status.remove(); } catch (e) { } }, 900);
     }
 
     // normalize model scale so large OBJ units don't fling the camera away
@@ -1770,20 +1770,20 @@ async function showProjectDiorama(project, modal) {
         const ny = (event.clientY - rect.top) / Math.max(1, rect.height) - 0.5;
         cursor.tx = THREE.MathUtils.clamp(nx, -0.6, 0.6);
         cursor.ty = THREE.MathUtils.clamp(ny, -0.6, 0.6);
-      } catch (e) {}
-      try { controls.autoRotate = false; } catch (e) {}
+      } catch (e) { }
+      try { controls.autoRotate = false; } catch (e) { }
     };
     const resetCursor = () => {
       cursor.tx = 0;
       cursor.ty = 0;
-      try { controls.autoRotate = true; } catch (e) {}
+      try { controls.autoRotate = true; } catch (e) { }
     };
     // pointer handling attached to the diorama canvas for correct local coordinates
     // and to avoid interference from other page-level pointer listeners.
     const pointerTarget = shell || canvas || renderer.domElement;
     try {
       pointerTarget.style.touchAction = pointerTarget.style.touchAction || 'none';
-    } catch (e) {}
+    } catch (e) { }
     pointerTarget.addEventListener('pointermove', updateCursor, { passive: true });
     pointerTarget.addEventListener('pointerleave', resetCursor);
     pointerTarget.addEventListener('pointercancel', resetCursor);
@@ -1805,7 +1805,7 @@ async function showProjectDiorama(project, modal) {
       label.material.transparent = true;
       label.material.depthWrite = false;
       label.material.depthTest = false;
-    } catch (e) {}
+    } catch (e) { }
     try {
       if (scene.environment && label.material && 'envMap' in label.material) {
         label.material.envMap = scene.environment;
@@ -1814,7 +1814,7 @@ async function showProjectDiorama(project, modal) {
         label.material.roughness = 0.42;
         label.material.needsUpdate = true;
       }
-    } catch (e) {}
+    } catch (e) { }
     model.add(label);
 
     let composer = null;
@@ -1914,20 +1914,20 @@ async function showProjectDiorama(project, modal) {
         cancelAnimationFrame(raf);
         try {
           window.removeEventListener('resize', resize);
-        } catch (e) {}
+        } catch (e) { }
         try {
           if (pointerTarget && pointerTarget.removeEventListener) {
             pointerTarget.removeEventListener('pointermove', updateCursor);
             pointerTarget.removeEventListener('pointerleave', resetCursor);
             pointerTarget.removeEventListener('pointercancel', resetCursor);
           }
-        } catch (e) {}
+        } catch (e) { }
         try {
           if (composer && typeof composer.dispose === 'function') composer.dispose();
-        } catch (e) {}
+        } catch (e) { }
         try {
           renderer.dispose();
-        } catch (e) {}
+        } catch (e) { }
       }
     };
 
@@ -1936,7 +1936,7 @@ async function showProjectDiorama(project, modal) {
     try {
       if (modal.__diorama && modal.__diorama.canvas && modal.__diorama.canvas.remove) modal.__diorama.canvas.remove();
       if (modal.__diorama && modal.__diorama.status && modal.__diorama.status.remove) modal.__diorama.status.remove();
-    } catch (e) {}
+    } catch (e) { }
     const sceneEl = createMediSyncCssDiorama(modal);
     shell.prepend(sceneEl);
     modal.__diorama = { canvas: sceneEl, css: true, cancel: sceneEl.__cleanup };
@@ -2015,6 +2015,1142 @@ function createTextPlane(THREE, text, width, height, color, background, font, gl
   const mat = new THREE.MeshStandardMaterial({ map: texture, transparent: true, metalness: 0.18, roughness: 0.46 });
   // don't assume env yet - will be set by caller when available
   return new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat);
+}
+
+function startPortfolioRoom() {
+  const canvas = document.getElementById("portfolio-room-canvas");
+  const stage = canvas ? canvas.closest(".portfolio-room-stage") : null;
+  const status = $("[data-portfolio-room-status]");
+  const list = $("[data-portfolio-room-list]");
+  if (!canvas) return;
+
+  if (list) {
+    list.innerHTML = portfolio.projects
+      .map((project) => `<span>${project.title.replace(" Hospital Management", "")}</span>`)
+      .join("");
+  }
+
+  const setStatus = (text, ready = false) => {
+    if (!status) return;
+    status.textContent = text;
+    status.dataset.ready = ready ? "true" : "false";
+  };
+
+  (async () => {
+    try {
+      const THREE = window.THREE || (await window.__threeModulePromise) || (await import("three"));
+      const loaderModule = await import("https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/GLTFLoader.js?module");
+      const controlsModule = await import("https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js?module");
+      const GLTFLoader = loaderModule.GLTFLoader || loaderModule.default || loaderModule;
+      const OrbitControls = controlsModule.OrbitControls || controlsModule.default || controlsModule;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x101820);
+      scene.fog = new THREE.Fog(0x101820, 9, 22);
+      const roomRig = new THREE.Group();
+      scene.add(roomRig);
+
+      const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
+      camera.position.set(3.2, 2.35, 4.9);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      const controls = new OrbitControls(camera, canvas);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+      controls.enablePan = false;
+      controls.minDistance = 2.2;
+      controls.maxDistance = 5.8;
+      controls.maxPolarAngle = Math.PI * 0.54;
+      controls.target.set(0, 0.95, 0);
+
+      scene.add(new THREE.HemisphereLight(0xd8ecff, 0x24180f, 2.15));
+      const keyLight = new THREE.DirectionalLight(0xfff1dc, 3.2);
+      keyLight.position.set(-3.5, 5, 4);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.set(1024, 1024);
+      scene.add(keyLight);
+
+      const neonA = new THREE.PointLight(0xff684f, 32, 9);
+      neonA.position.set(-2.5, 1.6, 2.4);
+      scene.add(neonA);
+      const neonB = new THREE.PointLight(0x4f9eff, 30, 8);
+      neonB.position.set(2.8, 1.3, -1.2);
+      scene.add(neonB);
+      const monitorGlow = new THREE.PointLight(0x79e7ff, 24, 6);
+      monitorGlow.position.set(0, 1.55, 1.55);
+      scene.add(monitorGlow);
+
+      setStatus("Loading gaming room...");
+      const gltf = await new GLTFLoader().loadAsync("assets/models/gaming_room%20(1).glb");
+      const model = gltf.scene || gltf.scenes?.[0];
+      model.traverse((node) => {
+        if (!node.isMesh) return;
+        node.castShadow = true;
+        node.receiveShadow = true;
+        if (node.material) {
+          node.material.envMapIntensity = 1.25;
+          node.material.roughness = Math.max(0.28, node.material.roughness || 0.5);
+        }
+      });
+
+      const box = new THREE.Box3().setFromObject(model);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const horizontalSize = Math.max(size.x, size.z);
+      const scale = 6.7 / horizontalSize;
+      model.scale.setScalar(scale);
+      model.position.sub(center.multiplyScalar(scale));
+      model.position.y += 0.04;
+      roomRig.add(model);
+      model.updateWorldMatrix(true, true);
+      canvas.__threeGroupRef = roomRig;
+      canvas.__roomModelRef = model;
+
+      applyPortfolioRoomTextures(THREE, model, roomRig);
+
+      const focusBox = new THREE.Box3().setFromObject(model);
+      const focusCenter = focusBox.getCenter(new THREE.Vector3());
+      controls.target.copy(focusCenter).add(new THREE.Vector3(0.16, 0.18, -0.08));
+      camera.position.copy(focusCenter).add(new THREE.Vector3(2.85, 1.95, 3.35));
+
+      setStatus("Click for full view", true);
+      if (stage) {
+        stage.classList.add("is-ready");
+        stage.addEventListener("click", () => {
+          stage.classList.add("is-fullscreen");
+          setStatus("Fullscreen portfolio room");
+          if (stage.requestFullscreen && document.fullscreenElement !== stage) {
+            stage.requestFullscreen().catch(() => { });
+          }
+        });
+        document.addEventListener("fullscreenchange", () => {
+          stage.classList.toggle("is-fullscreen", document.fullscreenElement === stage);
+          setStatus(document.fullscreenElement === stage ? "Fullscreen portfolio room" : "Click for full view", true);
+          resize();
+        });
+      }
+
+      function resize() {
+        const rect = canvas.getBoundingClientRect();
+        const width = Math.max(1, Math.floor(rect.width));
+        const height = Math.max(1, Math.floor(rect.height));
+        renderer.setSize(width, height, false);
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+      }
+
+      const clock = new THREE.Clock();
+      const cursor = { x: 0, y: 0, tx: 0, ty: 0 };
+      canvas.addEventListener(
+        "pointermove",
+        (event) => {
+          const rect = canvas.getBoundingClientRect();
+          cursor.tx = ((event.clientX - rect.left) / Math.max(rect.width, 1) - 0.5) * 2;
+          cursor.ty = ((event.clientY - rect.top) / Math.max(rect.height, 1) - 0.5) * 2;
+        },
+        { passive: true }
+      );
+      canvas.addEventListener(
+        "pointerleave",
+        () => {
+          cursor.tx = 0;
+          cursor.ty = 0;
+        },
+        { passive: true }
+      );
+      function animate() {
+        const time = clock.getElapsedTime();
+        cursor.x += (cursor.tx - cursor.x) * 0.055;
+        cursor.y += (cursor.ty - cursor.y) * 0.055;
+        roomRig.rotation.y = cursor.x * 0.12;
+        roomRig.rotation.x = -cursor.y * 0.035;
+        monitorGlow.intensity = 14 + Math.sin(time * 1.7) * 3;
+        neonA.intensity = 28 + Math.sin(time * 1.1) * 4;
+        neonB.intensity = 26 + Math.cos(time * 1.3) * 4;
+        scene.traverse((node) => {
+          if (node.userData.floatPhase !== undefined) {
+            node.position.y = node.userData.baseY + Math.sin(time * 1.2 + node.userData.floatPhase) * 0.008;
+          }
+        });
+        controls.update();
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+
+      resize();
+      window.addEventListener("resize", resize);
+      animate();
+    } catch (error) {
+      console.warn("[portfolio-room] failed", error);
+      setStatus("Room model could not load. The project list is still available.");
+      createPortfolioRoomFallback(canvas);
+    }
+  })();
+}
+
+function addPortfolioRoomOverlays(THREE, scene, model) {
+  const mainMonitor = findModelPart(model, ["monitor_7", "monitor.001_14", "monitor.002_22", "layar_laptop_51"]);
+  const screen = createPortfolioScreenPlane(THREE);
+  placePlaneOnModelPart(THREE, screen, mainMonitor, {
+    fallback: { position: [0.26, 1.08, 0.72], rotation: [-0.38, 0.05, 0], scale: [0.86, 0.48, 1] },
+    scaleMultiplier: 0.7,
+    lift: 0.008,
+    forceReadable: true
+  });
+  screen.userData.portfolioOverlay = true;
+  scene.add(screen);
+
+  const projectNames = portfolio.projects.map((project) =>
+    project.title
+      .replace(" Hospital Management", "")
+      .replace(" Blockchain API", "")
+      .replace(" README", "")
+  );
+  const gameParts = ["b1_53", "b2_54", "b3_55", "b4_56", "b5_57", "b6_58", "b7_60", "b1.001_61"]
+    .map((name) => findModelPart(model, [name]))
+    .filter(Boolean);
+  const fallbackPositions = [
+    [-0.96, 0.74, 0.82, -0.18],
+    [-0.48, 0.77, 0.92, 0.04],
+    [0.02, 0.76, 0.88, 0.12],
+    [0.54, 0.74, 0.78, 0.2]
+  ];
+
+  projectNames.forEach((name, index) => {
+    const label = createGameLabelPlane(THREE, name, index);
+    const [x, y, z, rotY] = fallbackPositions[index] || [index * 0.32 - 0.5, 0.74, 0.86, 0];
+    placePlaneOnModelPart(THREE, label, gameParts[index], {
+      fallback: { position: [x, y, z], rotation: [-Math.PI * 0.5, rotY, 0], scale: [0.32, 0.12, 1] },
+      scaleMultiplier: 0.58,
+      lift: 0.018,
+      layFlat: true
+    });
+    label.userData = { floatPhase: index * 0.9, baseY: label.position.y };
+    scene.add(label);
+  });
+}
+
+function applyPortfolioRoomTextures(THREE, model, roomRig) {
+  applyTextureToModelParts(THREE, model, ["Object_34", "Object_35"], createRoomMonitorTexture(THREE), 1.06);
+  applyTextureToModelParts(THREE, model, ["Object_13", "Object_14"], createProjectOverviewTexture(THREE, portfolio.projects[0], "#ff684f", 1), 0.86);
+  applyTextureToModelParts(THREE, model, ["Object_54", "Object_55"], createProjectOverviewTexture(THREE, portfolio.projects[1], "#4f9eff", 2), 0.86);
+  applyTextureToModelParts(THREE, model, ["Object_123", "Object_124"], createProjectOverviewTexture(THREE, portfolio.projects[2], "#62d29e", 3), 0.86);
+  addMissingRoomWalls(THREE, model);
+  return;
+
+  // Main big monitor — unchanged
+  applyTextureToModelParts(THREE, model, ["Object_34"], createRoomMonitorTexture(THREE), 1.08);
+
+  // ── Small project monitors ────────────────────────────────────────────────
+  // Strategy: inject a camera-facing overlay plane directly in front of each
+  // monitor mesh.  This bypasses GLB UV orientation entirely.
+  // The planes are added to roomRig so they rotate with the room on cursor move.
+  // animate() calls plane.lookAt(localCam) every frame to keep them facing the camera.
+
+  const screenAssignments = [
+    { screen: "Object_13", project: portfolio.projects[1], accent: "#4f9eff" },
+    { screen: "Object_54", project: portfolio.projects[2], accent: "#62d29e" },
+    { screen: "Object_123", project: portfolio.projects[0], accent: "#ff684f" }
+  ];
+
+  // Estimate where the camera will be placed (mirrors startPortfolioRoom logic)
+  const modelBox = new THREE.Box3().setFromObject(model);
+  const focusCenter = modelBox.getCenter(new THREE.Vector3());
+  const initialCamPos = focusCenter.clone().add(new THREE.Vector3(2.85, 1.95, 3.35));
+
+  const overlays = [];
+
+  screenAssignments.forEach((assignment, index) => {
+    const part = findModelPart(model, [assignment.screen]);
+    if (!part) return;
+
+    part.updateWorldMatrix(true, true);
+    const box = new THREE.Box3().setFromObject(part);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+
+    // Plane dimensions — scale up well beyond the physical mesh so text is clearly readable.
+    // The overlay intentionally covers the screen + part of the bezel; it glows so it reads like
+    // a lit monitor screen even at a distance.
+    const planeW = Math.max(Math.max(size.x, size.z) * 2.4, 0.38);
+    const planeH = Math.max(size.y * 2.4, 0.24);
+
+    const tex = createProjectOverviewTexture(THREE, assignment.project, assignment.accent, index + 1);
+    tex.flipY = true;          // standard Three.js PlaneGeometry UVs expect flipY=true
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.generateMipmaps = false;
+    tex.anisotropy = 16;
+    tex.needsUpdate = true;
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(planeW, planeH),
+      new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide, depthWrite: true })
+    );
+    plane.name = `monitor_overlay_${assignment.screen}`;
+
+    // Place at monitor world center (= roomRig local space since roomRig starts at origin)
+    plane.position.copy(center);
+    // Initial orientation: face toward the camera starting position
+    plane.lookAt(initialCamPos);
+    plane.renderOrder = 10;
+
+    roomRig.add(plane);
+    overlays.push(plane);
+  });
+
+  // Store on roomRig so animate() can access them without closure capture
+  roomRig.__monitorOverlays = overlays;
+
+  ["Object_35"].forEach((name) => {
+    const node = findModelPart(model, [name]);
+    if (!node || !node.material || Array.isArray(node.material)) return;
+    node.material = node.material.clone();
+    node.material.map = null;
+    node.material.emissiveMap = null;
+    node.material.color.set("#121a24");
+    node.material.roughness = 0.72;
+    node.material.metalness = 0.02;
+    node.material.needsUpdate = true;
+  });
+  addMissingRoomWalls(THREE, model);
+}
+
+function addScreenOverlay(THREE, model, partNames, texture, scaleMultiplier) {
+  if (!model.parent) return;
+  const parts = partNames.map((name) => findModelPart(model, [name])).filter(Boolean);
+  if (!parts.length) return;
+
+  const box = new THREE.Box3();
+  parts.forEach((part) => {
+    part.updateWorldMatrix(true, true);
+    box.union(new THREE.Box3().setFromObject(part));
+  });
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const anchor = parts[0];
+  const anchorPosition = new THREE.Vector3();
+  const anchorQuaternion = new THREE.Quaternion();
+  anchor.getWorldPosition(anchorPosition);
+  anchor.getWorldQuaternion(anchorQuaternion);
+  const dimensions = [size.x, size.y, size.z];
+  const normalAxis = dimensions.indexOf(Math.min(...dimensions));
+  let width = 1;
+  let height = 1;
+  let liftVector = new THREE.Vector3(0, 0, 1);
+  let faceRotation = new THREE.Euler(0, 0, 0);
+
+  if (normalAxis === 0) {
+    width = Math.max(size.z, 0.2) * scaleMultiplier;
+    height = Math.max(size.y, 0.2) * scaleMultiplier;
+    liftVector = new THREE.Vector3(1, 0, 0);
+    faceRotation = new THREE.Euler(0, Math.PI / 2, 0);
+  } else if (normalAxis === 1) {
+    width = Math.max(size.x, 0.2) * scaleMultiplier;
+    height = Math.max(size.z, 0.2) * scaleMultiplier;
+    liftVector = new THREE.Vector3(0, 1, 0);
+    faceRotation = new THREE.Euler(-Math.PI / 2, 0, 0);
+  } else {
+    width = Math.max(size.x, 0.2) * scaleMultiplier;
+    height = Math.max(size.y, 0.2) * scaleMultiplier;
+    liftVector = new THREE.Vector3(0, 0, 1);
+    faceRotation = new THREE.Euler(0, 0, 0);
+  }
+
+  const panel = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, height),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false })
+  );
+  panel.name = "portfolio_readable_screen_overlay";
+  panel.position.copy(center).add(liftVector.clone().applyQuaternion(anchorQuaternion).multiplyScalar(0.014));
+  panel.quaternion.copy(anchorQuaternion).multiply(new THREE.Quaternion().setFromEuler(faceRotation));
+  panel.scale.setScalar(0.98);
+  panel.renderOrder = 20;
+  model.parent.add(panel);
+}
+
+function applyTextureToModelParts(THREE, model, partNames, texture, intensity) {
+  partNames.forEach((name) => {
+    const part = findModelPart(model, [name]);
+    if (!part) return;
+    part.traverse((node) => {
+      if (!node.isMesh) return;
+      node.material = new THREE.MeshStandardMaterial({
+        map: texture,
+        emissive: 0xffffff,
+        emissiveMap: texture,
+        emissiveIntensity: intensity,
+        roughness: 0.22,
+        metalness: 0.04,
+        side: THREE.DoubleSide
+      });
+      node.material.needsUpdate = true;
+    });
+  });
+}
+
+function createPortfolioScreenTexture(THREE, rotate180 = false) {
+  const mesh = createPortfolioScreenPlane(THREE);
+  const texture = mesh.material.map;
+  applyReadableUvFix(THREE, texture);
+  if (rotate180) texture.rotation = Math.PI;
+  texture.flipY = false;
+  return texture;
+}
+
+function createRoomMonitorTexture(THREE) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1600;
+  canvas.height = 900;
+  const ctx = canvas.getContext("2d");
+
+  const bg = ctx.createLinearGradient(0, 0, 1600, 900);
+  bg.addColorStop(0, "#06101f");
+  bg.addColorStop(0.55, "#101d30");
+  bg.addColorStop(1, "#05070b");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, 1600, 900);
+
+  ctx.fillStyle = "rgba(255,255,255,0.05)";
+  for (let x = 120; x < 1520; x += 150) ctx.fillRect(x, 0, 2, 900);
+  for (let y = 110; y < 850; y += 130) ctx.fillRect(0, y, 1600, 2);
+
+  ctx.strokeStyle = "rgba(121,231,255,0.45)";
+  ctx.lineWidth = 16;
+  ctx.strokeRect(32, 32, 1536, 836);
+
+  ctx.fillStyle = "#ff684f";
+  ctx.font = "900 34px Inter, Arial, sans-serif";
+  ctx.fillText("SWARNAVO SEN / PORTFOLIO", 92, 98);
+
+  ctx.fillStyle = "#fff8ea";
+  ctx.font = "900 114px Inter, Arial, sans-serif";
+  ctx.fillText("PROJECT ROOM", 92, 214);
+
+  ctx.fillStyle = "rgba(255,248,234,0.78)";
+  ctx.font = "700 40px Inter, Arial, sans-serif";
+  wrapCanvasText(ctx, "The main monitor is reserved for the room overview, with the showcase projects listed below in the same display.", 96, 286, 1400, 54);
+
+  const rows = [
+    ["MediSync Hospital Management", "TypeScript / React / FastAPI", "#ff684f"],
+    ["KYC Blockchain API", "Python / FastAPI / MongoDB", "#4f9eff"],
+    ["Eco Connect", "Jupyter Notebook / Sustainability", "#62d29e"],
+    ["GitHub Profile README", "Markdown / GitHub / Developer Profile", "#f0c15c"]
+  ];
+
+  rows.forEach((row, index) => {
+    const y = 392 + index * 110;
+    ctx.fillStyle = "rgba(255,248,234,0.06)";
+    ctx.fillRect(86, y - 56, 1428, 84);
+    ctx.fillStyle = row[2];
+    ctx.fillRect(100, y - 38, 18, 48);
+    ctx.fillStyle = "#fff8ea";
+    ctx.font = "800 54px Inter, Arial, sans-serif";
+    ctx.fillText(row[0], 140, y);
+    ctx.fillStyle = "rgba(255,248,234,0.72)";
+    ctx.font = "700 28px Inter, Arial, sans-serif";
+    ctx.fillText(row[1], 140, y + 38);
+  });
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.center.set(0.5, 0.5);
+  texture.rotation = 0;
+  texture.flipY = true;
+  return texture;
+}
+
+function createGameLabelTexture(THREE, name, index) {
+  const mesh = createGameLabelPlane(THREE, name, index);
+  const texture = mesh.material.map;
+  texture.flipY = false;
+  return texture;
+}
+
+function createProjectOverviewTexture(THREE, project, accent, index) {
+  // Fixed 1600×900 canvas — the overlay plane is sized to the monitor,
+  // so this resolution always fills the physical screen regardless of monitor size.
+  const W = 1600, H = 900;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  const title = project.title
+    .replace(" Hospital Management", "")
+    .replace(" Blockchain API", "");
+
+  const subtitleMap = {
+    "MediSync Hospital Management": "Beds · Doctors · Ambulance · Emergency",
+    "KYC Blockchain API": "OCR · Face match · Blockchain hash",
+    "Eco Connect": "Sustainability · Jupyter · Prototype",
+    "GitHub Profile README": "Profile · Stack · Developer identity"
+  };
+  const subtitle = subtitleMap[project.title] || project.tags.slice(0, 3).join(" · ");
+  const tags = project.tags.slice(0, 3).join("  /  ");
+
+  if (project.title === "KYC Blockchain API") {
+    ctx.fillStyle = "#04101e";
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 24;
+    ctx.strokeRect(28, 28, W - 56, H - 56);
+    ctx.fillStyle = accent;
+    ctx.font = "900 44px Inter, Arial, sans-serif";
+    ctx.fillText("PROJECT 02", 70, 108);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 170px Inter, Arial, sans-serif";
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = 32;
+    ctx.fillText("KYC", 70, 300);
+    ctx.font = "900 120px Inter, Arial, sans-serif";
+    ctx.fillText("BLOCKCHAIN", 70, 430);
+    ctx.shadowBlur = 0;
+    const points = ["OCR documents", "Face match checks", "Blockchain hash verify"];
+    ctx.font = "800 58px Inter, Arial, sans-serif";
+    points.forEach((point, pointIndex) => {
+      const y = 575 + pointIndex * 82;
+      ctx.fillStyle = accent;
+      ctx.fillRect(78, y - 40, 24, 24);
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.fillText(point, 128, y - 18);
+    });
+    ctx.fillStyle = "rgba(255,255,255,0.74)";
+    ctx.font = "800 42px Inter, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Python / FastAPI / MongoDB", W / 2, H - 58);
+    ctx.textAlign = "left";
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.flipY = true;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    texture.anisotropy = 16;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  // Background
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#04101e");
+  bg.addColorStop(0.6, "#081728");
+  bg.addColorStop(1, "#020810");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle dot-grid
+  ctx.fillStyle = "rgba(255,255,255,0.045)";
+  for (let x = 100; x < W; x += 100) for (let y = 80; y < H; y += 80) ctx.fillRect(x - 1, y - 1, 2, 2);
+
+  // Thick accent border
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 18;
+  ctx.strokeRect(18, 18, W - 36, H - 36);
+
+  // Accent top bar glow
+  const topGlow = ctx.createLinearGradient(0, 18, 0, 56);
+  topGlow.addColorStop(0, accent);
+  topGlow.addColorStop(1, "transparent");
+  ctx.fillStyle = topGlow;
+  ctx.fillRect(18, 18, W - 36, 38);
+
+  // Index badge
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.roundRect(52, 70, 160, 64, 10);
+  ctx.fill();
+  ctx.fillStyle = "#000";
+  ctx.font = "900 44px Inter, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`0${index}`, 132, 118);
+
+  // Compact project title so it stays readable on the small in-room screens.
+  ctx.textAlign = "left";
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 132px Inter, Arial, sans-serif";
+  ctx.shadowColor = accent;
+  ctx.shadowBlur = 28;
+  wrapCanvasText(ctx, title.toUpperCase(), 52, 270, W - 104, 142);
+  ctx.shadowBlur = 0;
+
+  // Subtitle
+  ctx.fillStyle = "rgba(255,255,255,0.86)";
+  ctx.font = "700 54px Inter, Arial, sans-serif";
+  wrapCanvasText(ctx, subtitle, 56, 545, W - 112, 66);
+
+  // Bottom tag bar
+  ctx.fillStyle = "rgba(255,255,255,0.1)";
+  ctx.fillRect(18, H - 108, W - 36, 90);
+  ctx.fillStyle = accent;
+  ctx.fillRect(18, H - 112, W - 36, 8);
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  ctx.font = "700 42px Inter, Arial, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(tags, W / 2, H - 48);
+  ctx.textAlign = "left";
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.flipY = true;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false;
+  texture.anisotropy = 16;
+  texture.needsUpdate = true;
+  return texture;
+}
+
+function applyReadableUvFix(THREE, texture) {
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.repeat.x = -1;
+  texture.offset.x = 1;
+}
+
+function addMissingRoomWalls(THREE, model) {
+  if (!model.parent) return;
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const floorY = box.min.y + 0.02;
+  const wallHeight = size.y * 0.74;
+  const wallY = floorY + wallHeight * 0.5;
+  const depth = size.z * 0.98;
+  const width = size.x * 0.98;
+  const roomMat = findRoomWallMaterial(THREE, model);
+
+  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(depth, wallHeight), roomMat.clone());
+  rightWall.name = "portfolio_matching_right_wall";
+  rightWall.position.set(box.max.x - 0.02, wallY, center.z);
+  rightWall.rotation.y = -Math.PI / 2;
+  rightWall.receiveShadow = true;
+  model.parent.add(rightWall);
+
+  const frontWall = new THREE.Mesh(new THREE.PlaneGeometry(width, wallHeight), roomMat.clone());
+  frontWall.name = "portfolio_matching_front_wall";
+  frontWall.position.set(center.x, wallY, box.max.z - 0.02);
+  frontWall.rotation.y = Math.PI;
+  frontWall.receiveShadow = true;
+  model.parent.add(frontWall);
+}
+
+function findRoomWallMaterial(THREE, model) {
+  let material = null;
+  const wall = findModelPart(model, ["Object_5", "tembok", "ruangan_1"]);
+  if (wall) {
+    wall.traverse((node) => {
+      if (!material && node.isMesh && node.material && node.name !== "Object_4") {
+        material = Array.isArray(node.material) ? node.material[0] : node.material;
+      }
+    });
+  }
+  if (material) {
+    const clone = material.clone();
+    clone.side = THREE.DoubleSide;
+    clone.color.set("#07156b");
+    clone.roughness = Math.max(clone.roughness || 0.5, 0.7);
+    return clone;
+  }
+  return new THREE.MeshStandardMaterial({ color: 0x07156b, roughness: 0.72, metalness: 0.03, side: THREE.DoubleSide });
+}
+
+function createRoomWallTexture(THREE, base, panel, withLine) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, panel);
+  gradient.addColorStop(0.45, base);
+  gradient.addColorStop(1, "#090d24");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  for (let i = 0; i < 9; i += 1) {
+    const x = 90 + i * 98;
+    ctx.fillRect(x, 0, 2, canvas.height);
+  }
+
+  if (withLine) {
+    ctx.strokeStyle = "rgba(221, 244, 229, 0.9)";
+    ctx.lineWidth = 22;
+    ctx.beginPath();
+    ctx.moveTo(150, 760);
+    ctx.lineTo(365, 540);
+    ctx.lineTo(520, 650);
+    ctx.lineTo(790, 360);
+    ctx.lineTo(940, 460);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(120, 194, 219, 0.9)";
+    ctx.lineWidth = 12;
+    ctx.stroke();
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(1, 1);
+  return texture;
+}
+
+function addDeskGameCases(THREE, model, projectNames) {
+  const desk = findModelPart(model, ["meja_6", "Object_11"]);
+  if (!desk) return;
+  const deskBox = new THREE.Box3().setFromObject(desk);
+  const y = deskBox.max.y + 0.012;
+  const z = deskBox.max.z - 0.22;
+  const startX = deskBox.min.x + 0.52;
+
+  projectNames.slice(0, 4).forEach((name, index) => {
+    const gameCase = new THREE.Group();
+    const texture = createGameLabelTexture(THREE, name, index);
+    const accent = [0xff684f, 0x4f9eff, 0x62d29e, 0xf0c15c][index % 4];
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.018, 0.32),
+      new THREE.MeshStandardMaterial({ color: 0x11151e, roughness: 0.42, metalness: 0.05 })
+    );
+    body.castShadow = true;
+    body.receiveShadow = true;
+    gameCase.add(body);
+
+    const cover = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.2, 0.3),
+      new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
+    );
+    cover.rotation.x = -Math.PI / 2;
+    cover.position.y = 0.012;
+    gameCase.add(cover);
+
+    const spine = new THREE.Mesh(
+      new THREE.BoxGeometry(0.018, 0.02, 0.32),
+      new THREE.MeshStandardMaterial({ color: accent, emissive: accent, emissiveIntensity: 0.12, roughness: 0.35 })
+    );
+    spine.position.x = -0.11;
+    gameCase.add(spine);
+
+    gameCase.position.set(startX + index * 0.26, y, z - (index % 2) * 0.05);
+    gameCase.rotation.y = -0.12 + index * 0.08;
+    model.parent.add(gameCase);
+  });
+}
+
+function addPortfolioUpgradeKit(THREE, scene) {
+  const kit = new THREE.Group();
+  kit.name = "portfolio_upgrade_kit";
+  kit.position.set(0.72, -0.78, 0.96);
+  kit.rotation.y = -0.08;
+  scene.add(kit);
+
+  const wood = new THREE.MeshStandardMaterial({ color: 0x3b251a, roughness: 0.58, metalness: 0.08 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x10151d, roughness: 0.36, metalness: 0.48 });
+  const cyan = new THREE.MeshStandardMaterial({
+    color: 0x74e8ff,
+    emissive: 0x2bc9ff,
+    emissiveIntensity: 0.65,
+    roughness: 0.24,
+    metalness: 0.16
+  });
+
+  const table = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.08, 0.72), wood);
+  table.position.set(0, 0, 0);
+  table.castShadow = true;
+  table.receiveShadow = true;
+  kit.add(table);
+
+  [-0.74, 0.74].forEach((x) => {
+    [-0.25, 0.25].forEach((z) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.58, 0.06), metal);
+      leg.position.set(x, -0.31, z);
+      leg.castShadow = true;
+      kit.add(leg);
+    });
+  });
+
+  const monitorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.72, 0.045), metal);
+  monitorFrame.position.set(0.08, 0.62, -0.28);
+  monitorFrame.rotation.x = -0.04;
+  monitorFrame.castShadow = true;
+  kit.add(monitorFrame);
+
+  const screen = createPortfolioScreenPlane(THREE);
+  screen.position.set(0.08, 0.62, -0.252);
+  screen.rotation.x = -0.04;
+  screen.scale.set(1.16, 0.62, 1);
+  kit.add(screen);
+
+  const stand = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.42, 0.06), metal);
+  stand.position.set(0.08, 0.28, -0.3);
+  kit.add(stand);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.04, 0.24), metal);
+  base.position.set(0.08, 0.08, -0.16);
+  kit.add(base);
+
+  const glowBar = new THREE.Mesh(new THREE.BoxGeometry(1.74, 0.025, 0.035), cyan);
+  glowBar.position.set(0, 0.07, 0.38);
+  kit.add(glowBar);
+
+  const projectNames = portfolio.projects.map((project) =>
+    project.title
+      .replace(" Hospital Management", "")
+      .replace(" Blockchain API", "")
+      .replace(" README", "")
+  );
+  const gamePositions = [
+    [-0.62, 0.095, 0.18, -0.2],
+    [-0.2, 0.105, 0.22, 0.08],
+    [0.24, 0.095, 0.18, 0.2],
+    [0.62, 0.105, 0.2, 0.34]
+  ];
+  projectNames.forEach((name, index) => {
+    const box = new THREE.Group();
+    const color = [0xff684f, 0x4f9eff, 0x62d29e, 0xf0c15c][index % 4];
+    const shell = new THREE.Mesh(
+      new THREE.BoxGeometry(0.34, 0.075, 0.24),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.42, metalness: 0.08, emissive: color, emissiveIntensity: 0.08 })
+    );
+    shell.castShadow = true;
+    shell.receiveShadow = true;
+    box.add(shell);
+
+    const label = createGameLabelPlane(THREE, name, index);
+    label.position.set(0, 0.041, 0);
+    label.rotation.x = -Math.PI / 2;
+    label.scale.set(0.31, 0.105, 1);
+    box.add(label);
+
+    const [x, y, z, rotY] = gamePositions[index];
+    box.position.set(x, y, z);
+    box.rotation.y = rotY;
+    kit.add(box);
+  });
+
+  const fill = new THREE.PointLight(0x74e8ff, 9, 2.5);
+  fill.position.set(0.08, 0.6, 0.05);
+  kit.add(fill);
+}
+
+function addMainDeskPortfolioDetails(THREE, scene) {
+  const screen = createPortfolioScreenPlane(THREE);
+  screen.name = "main_monitor_portfolio_screen";
+  screen.position.set(1.15, 0.18, -1.04);
+  screen.rotation.set(-0.03, -0.08, 0);
+  screen.scale.set(0.86, 0.48, 1);
+  scene.add(screen);
+
+  const glow = new THREE.PointLight(0x74e8ff, 10, 2.8);
+  glow.position.set(1.15, 0.18, -0.72);
+  scene.add(glow);
+
+  const projectNames = portfolio.projects.map((project) =>
+    project.title
+      .replace(" Hospital Management", "")
+      .replace(" Blockchain API", "")
+      .replace(" README", "")
+  );
+  const casePositions = [
+    [0.46, -0.42, -0.56, -0.16],
+    [0.76, -0.415, -0.52, 0.04],
+    [1.06, -0.42, -0.55, 0.18],
+    [1.35, -0.415, -0.5, 0.3]
+  ];
+
+  projectNames.forEach((name, index) => {
+    const gameCase = new THREE.Group();
+    gameCase.name = `project_game_${index + 1}`;
+    const accent = [0xff684f, 0x4f9eff, 0x62d29e, 0xf0c15c][index % 4];
+    const caseBody = new THREE.Mesh(
+      new THREE.BoxGeometry(0.24, 0.018, 0.34),
+      new THREE.MeshStandardMaterial({
+        color: 0x151922,
+        roughness: 0.38,
+        metalness: 0.04,
+        emissive: accent,
+        emissiveIntensity: 0.06
+      })
+    );
+    caseBody.castShadow = true;
+    caseBody.receiveShadow = true;
+    gameCase.add(caseBody);
+
+    const cover = createGameLabelPlane(THREE, name, index);
+    cover.position.set(0, 0.012, 0);
+    cover.rotation.x = -Math.PI / 2;
+    cover.scale.set(0.22, 0.32, 1);
+    gameCase.add(cover);
+
+    const spine = new THREE.Mesh(
+      new THREE.BoxGeometry(0.025, 0.022, 0.34),
+      new THREE.MeshStandardMaterial({ color: accent, roughness: 0.3, metalness: 0.12, emissive: accent, emissiveIntensity: 0.16 })
+    );
+    spine.position.x = -0.125;
+    gameCase.add(spine);
+
+    const [x, y, z, rotY] = casePositions[index];
+    gameCase.position.set(x, y, z);
+    gameCase.rotation.y = rotY;
+    scene.add(gameCase);
+  });
+}
+
+function completePortfolioRoom(THREE, group, focusBox) {
+  const size = focusBox.getSize(new THREE.Vector3());
+  const center = focusBox.getCenter(new THREE.Vector3());
+  const floorY = focusBox.min.y - 0.025;
+  const width = Math.max(size.x + 3.2, 7.2);
+  const depth = Math.max(size.z + 3.2, 7.4);
+  const height = Math.max(size.y + 1.8, 4.5);
+  const backZ = center.z - depth * 0.5;
+  const frontZ = center.z + depth * 0.5;
+  const leftX = center.x - width * 0.5;
+  const rightX = center.x + width * 0.5;
+  const topY = floorY + height;
+
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x15191f, roughness: 0.74, metalness: 0.06 });
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x172233, roughness: 0.66, metalness: 0.04 });
+  const sideWallMat = new THREE.MeshStandardMaterial({ color: 0x121b2a, roughness: 0.7, metalness: 0.04 });
+  const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x1b222b, roughness: 0.82, metalness: 0.02 });
+
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(center.x, floorY, center.z);
+  floor.receiveShadow = true;
+  group.add(floor);
+
+  const backWall = new THREE.Mesh(new THREE.PlaneGeometry(width, height), wallMat);
+  backWall.position.set(center.x, floorY + height * 0.5, backZ);
+  backWall.receiveShadow = true;
+  group.add(backWall);
+
+  const leftWall = new THREE.Mesh(new THREE.PlaneGeometry(depth, height), sideWallMat);
+  leftWall.position.set(leftX, floorY + height * 0.5, center.z);
+  leftWall.rotation.y = Math.PI / 2;
+  leftWall.receiveShadow = true;
+  group.add(leftWall);
+
+  const rightWall = new THREE.Mesh(new THREE.PlaneGeometry(depth, height), sideWallMat);
+  rightWall.position.set(rightX, floorY + height * 0.5, center.z);
+  rightWall.rotation.y = -Math.PI / 2;
+  rightWall.receiveShadow = true;
+  group.add(rightWall);
+
+  const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), ceilingMat);
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.set(center.x, topY, center.z);
+  group.add(ceiling);
+
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x2b3d58, roughness: 0.48, metalness: 0.18 });
+  const trimPieces = [
+    [width, 0.04, 0.045, center.x, floorY + 0.08, backZ + 0.02],
+    [width, 0.045, 0.045, center.x, topY - 0.08, backZ + 0.02],
+    [0.045, 0.04, depth, leftX + 0.02, floorY + 0.08, center.z],
+    [0.045, 0.04, depth, rightX - 0.02, floorY + 0.08, center.z]
+  ];
+  trimPieces.forEach(([w, h, d, x, y, z]) => {
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), trimMat);
+    trim.position.set(x, y, z);
+    trim.castShadow = true;
+    group.add(trim);
+  });
+
+  const glowTexture = createSoftWallGlowTexture(THREE);
+  const glow = new THREE.Mesh(
+    new THREE.PlaneGeometry(width * 0.82, height * 0.52),
+    new THREE.MeshBasicMaterial({ map: glowTexture, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })
+  );
+  glow.position.set(center.x + width * 0.04, floorY + height * 0.62, backZ + 0.035);
+  group.add(glow);
+
+  const rug = new THREE.Mesh(
+    new THREE.PlaneGeometry(width * 0.46, depth * 0.32),
+    new THREE.MeshStandardMaterial({ color: 0x283247, roughness: 0.88, metalness: 0.02 })
+  );
+  rug.rotation.x = -Math.PI / 2;
+  rug.position.set(center.x + 0.65, floorY + 0.006, center.z + depth * 0.18);
+  rug.receiveShadow = true;
+  group.add(rug);
+}
+
+function createSoftWallGlowTexture(THREE) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 512;
+  canvas.height = 320;
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createRadialGradient(256, 160, 16, 256, 160, 260);
+  gradient.addColorStop(0, "rgba(116, 232, 255, 0.32)");
+  gradient.addColorStop(0.45, "rgba(79, 158, 255, 0.16)");
+  gradient.addColorStop(1, "rgba(79, 158, 255, 0)");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function findModelPart(model, names) {
+  for (const name of names) {
+    const exact = model.getObjectByName(name);
+    if (exact) return exact;
+  }
+  const lowered = names.map((name) => name.toLowerCase());
+  let found = null;
+  model.traverse((node) => {
+    if (found || !node.name) return;
+    const nodeName = node.name.toLowerCase();
+    if (lowered.some((name) => nodeName.includes(name.replace(/_\d+$/, "")))) {
+      found = node;
+    }
+  });
+  return found;
+}
+
+function placePlaneOnModelPart(THREE, plane, part, options) {
+  const fallback = options.fallback;
+  if (!part) {
+    plane.position.set(...fallback.position);
+    plane.rotation.set(...fallback.rotation);
+    plane.scale.set(...fallback.scale);
+    return;
+  }
+
+  part.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(part);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const width = Math.max(size.x, size.z, 0.12) * (options.scaleMultiplier || 0.7);
+  const height = Math.max(Math.min(size.y || size.z, width * 0.56), width * 0.32);
+  const anchorPosition = new THREE.Vector3();
+  const anchorQuaternion = new THREE.Quaternion();
+  part.getWorldPosition(anchorPosition);
+  part.getWorldQuaternion(anchorQuaternion);
+
+  plane.position.copy(center);
+  if (options.layFlat) {
+    plane.position.y = box.max.y + (options.lift || 0.015);
+    plane.quaternion.copy(anchorQuaternion);
+    plane.rotateX(-Math.PI * 0.5);
+    plane.scale.set(width, Math.max(width * 0.34, 0.11), 1);
+  } else {
+    plane.position.copy(anchorPosition).add(new THREE.Vector3(0, 0, options.lift || 0.012).applyQuaternion(anchorQuaternion));
+    plane.quaternion.copy(anchorQuaternion);
+    plane.scale.set(width * (options.forceReadable ? 0.86 : 1), height * (options.forceReadable ? 0.82 : 1), 1);
+  }
+}
+
+function createPortfolioScreenPlane(THREE) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1280;
+  canvas.height = 720;
+  const ctx = canvas.getContext("2d");
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, "#07111f");
+  gradient.addColorStop(0.58, "#14202d");
+  gradient.addColorStop(1, "#0a0d13");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#79e7ff";
+  ctx.lineWidth = 10;
+  ctx.strokeRect(28, 28, canvas.width - 56, canvas.height - 56);
+  ctx.fillStyle = "#ff684f";
+  ctx.font = "800 34px Inter, Arial, sans-serif";
+  ctx.fillText("SWARNAVO SEN / PORTFOLIO", 70, 95);
+  ctx.fillStyle = "#fff8ea";
+  ctx.font = "900 82px Inter, Arial, sans-serif";
+  ctx.fillText("PROJECT ROOM", 70, 205);
+  ctx.font = "700 34px Inter, Arial, sans-serif";
+  wrapCanvasText(ctx, "MediSync, KYC Blockchain, Eco Connect, and GitHub Profile are staged as playable table projects.", 74, 290, 900, 48);
+  portfolio.projects.forEach((project, index) => {
+    const y = 440 + index * 52;
+    ctx.fillStyle = index % 2 ? "#79e7ff" : "#ff684f";
+    ctx.fillRect(76, y - 24, 18, 18);
+    ctx.fillStyle = "rgba(255,248,234,0.86)";
+    ctx.font = "700 30px Inter, Arial, sans-serif";
+    ctx.fillText(project.title, 112, y - 7);
+  });
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshStandardMaterial({
+      map: texture,
+      emissive: 0xffffff,
+      emissiveMap: texture,
+      emissiveIntensity: 0.95,
+      roughness: 0.18,
+      metalness: 0.04,
+      side: THREE.DoubleSide
+    })
+  );
+}
+
+function createGameLabelPlane(THREE, name, index) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 720;
+  canvas.height = 240;
+  const ctx = canvas.getContext("2d");
+  const colors = ["#ff684f", "#4f9eff", "#62d29e", "#f0c15c"];
+  ctx.fillStyle = "#11141a";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = colors[index % colors.length];
+  ctx.fillRect(0, 0, canvas.width, 24);
+  ctx.fillRect(0, canvas.height - 24, canvas.width, 24);
+  ctx.strokeStyle = "rgba(255,248,234,0.36)";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(18, 18, canvas.width - 36, canvas.height - 36);
+  ctx.fillStyle = "#fff8ea";
+  ctx.font = "900 58px Inter, Arial, sans-serif";
+  wrapCanvasText(ctx, name.toUpperCase(), 46, 104, 620, 64);
+  ctx.fillStyle = "rgba(255,248,234,0.68)";
+  ctx.font = "700 24px Inter, Arial, sans-serif";
+  ctx.fillText("PROJECT GAME CARD", 48, 204);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide })
+  );
+}
+
+function createPortfolioRoomFallback(canvas) {
+  const ctx = canvas.getContext("2d");
+  let frame = 0;
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+  function draw() {
+    const rect = canvas.getBoundingClientRect();
+    frame += 1;
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#080b12";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#151b24";
+    ctx.fillRect(rect.width * 0.18, rect.height * 0.58, rect.width * 0.64, rect.height * 0.1);
+    ctx.fillStyle = "#79e7ff";
+    ctx.fillRect(rect.width * 0.32, rect.height * 0.22 + Math.sin(frame * 0.03) * 3, rect.width * 0.36, rect.height * 0.24);
+    ctx.fillStyle = "#fff8ea";
+    ctx.font = "800 22px Inter, Arial";
+    ctx.fillText("PROJECT ROOM", rect.width * 0.36, rect.height * 0.35);
+    portfolio.projects.forEach((project, index) => {
+      ctx.fillStyle = index % 2 ? "#4f9eff" : "#ff684f";
+      ctx.fillRect(rect.width * (0.26 + index * 0.12), rect.height * 0.53, rect.width * 0.1, rect.height * 0.05);
+    });
+    requestAnimationFrame(draw);
+  }
+  resize();
+  window.addEventListener("resize", resize);
+  draw();
 }
 
 function addAmbulance(THREE, group, x, y, z, redMat, whiteMat) {
@@ -2171,9 +3307,9 @@ function createMediSyncCanvasFallback(canvas) {
 function destroyProjectDiorama(modal) {
   if (!modal || !modal.__diorama) return;
   if (modal.__dioramaFrame) cancelAnimationFrame(modal.__dioramaFrame);
-  try { if (modal.__diorama.cancel) modal.__diorama.cancel(); } catch (e) {}
-  try { if (modal.__diorama.resize) window.removeEventListener('resize', modal.__diorama.resize); } catch (e) {}
-  try { if (modal.__diorama.renderer && typeof modal.__diorama.renderer.dispose === 'function') modal.__diorama.renderer.dispose(); } catch (e) {}
-  try { modal.__diorama.canvas.remove(); } catch (e) {}
+  try { if (modal.__diorama.cancel) modal.__diorama.cancel(); } catch (e) { }
+  try { if (modal.__diorama.resize) window.removeEventListener('resize', modal.__diorama.resize); } catch (e) { }
+  try { if (modal.__diorama.renderer && typeof modal.__diorama.renderer.dispose === 'function') modal.__diorama.renderer.dispose(); } catch (e) { }
+  try { modal.__diorama.canvas.remove(); } catch (e) { }
   delete modal.__diorama; delete modal.__dioramaFrame;
 }

@@ -2105,7 +2105,7 @@ function startPortfolioRoom() {
       scene.add(monitorGlow);
 
       setStatus("Loading gaming room...");
-      const gameRoomUrl = getAssetPath("assets/models/gaming_room%20(1).glb");
+      const gameRoomUrl = getAssetPath("assets/models/gaming_room_1.glb");
       const gltf = await new GLTFLoader().loadAsync(gameRoomUrl);
       const model = gltf.scene || gltf.scenes?.[0];
       model.traverse((node) => {

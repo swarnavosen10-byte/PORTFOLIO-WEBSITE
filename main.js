@@ -2260,7 +2260,6 @@ function applyPortfolioRoomTextures(THREE, model, roomRig) {
   applyTextureToModelParts(THREE, model, ["Object_13", "Object_14"], createProjectOverviewTexture(THREE, portfolio.projects[0], "#ff684f", 1), 0.86);
   applyTextureToModelParts(THREE, model, ["Object_54", "Object_55"], createProjectOverviewTexture(THREE, portfolio.projects[1], "#4f9eff", 2), 0.86);
   applyTextureToModelParts(THREE, model, ["Object_123", "Object_124"], createProjectOverviewTexture(THREE, portfolio.projects[2], "#62d29e", 3), 0.86);
-  addMissingRoomWalls(THREE, model);
   return;
 
   // Main big monitor — unchanged
@@ -2338,7 +2337,6 @@ function applyPortfolioRoomTextures(THREE, model, roomRig) {
     node.material.metalness = 0.02;
     node.material.needsUpdate = true;
   });
-  addMissingRoomWalls(THREE, model);
 }
 
 function addScreenOverlay(THREE, model, partNames, texture, scaleMultiplier) {

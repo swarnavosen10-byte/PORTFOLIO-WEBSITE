@@ -132,6 +132,22 @@ const portfolio = {
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+// Compute base URL for assets (handles GitHub Pages subdirectory correctly)
+const getAssetPath = (() => {
+  let basePath = '';
+  if (typeof window !== 'undefined') {
+    const loc = window.location;
+    const pathname = loc.pathname;
+    // Check if we're on GitHub Pages PORTFOLIO-WEBSITE subdirectory
+    if (pathname.includes('/PORTFOLIO-WEBSITE')) {
+      // Extract base: /PORTFOLIO-WEBSITE/ or /PORTFOLIO-WEBSITE
+      const match = pathname.match(/^\/PORTFOLIO-WEBSITE\/?/);
+      basePath = match ? match[0].replace(/\/$/, '') : '';
+    }
+  }
+  return (relativePath) => basePath ? basePath + '/' + relativePath : relativePath;
+})();
+
 const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const root = document.documentElement;
 const savedTheme = localStorage.getItem("portfolio-theme");
@@ -1263,15 +1279,16 @@ if (!window.__hospitalGLBPromise) {
   window.__hospitalGLBBuffer = null;
   window.__hospitalGLBPromise = (async () => {
     try {
-      console.log('[diorama] global prefetch starting', 'assets/models/hospital (2).glb');
-      const r = await fetch('assets/models/hospital (2).glb');
+      const modelPath = getAssetPath('assets/models/hospital (2).glb');
+      console.log('[diorama] global prefetch starting', modelPath);
+      const r = await fetch(modelPath);
       if (!r.ok) {
         console.warn('[diorama] global prefetch returned', r.status);
         return null;
       }
       const ab = await r.arrayBuffer();
       window.__hospitalGLBBuffer = ab;
-      window.__hospitalGLBUrl = 'assets/models/hospital (2).glb';
+      window.__hospitalGLBUrl = modelPath;
       console.log('[diorama] global prefetch complete bytes=', ab.byteLength);
       return ab;
     } catch (e) {
@@ -1444,8 +1461,8 @@ async function showProjectDiorama(project, modal) {
     window.__hospitalGLBBuffer = null;
     window.__hospitalGLBPromise = (async () => {
       const preloadUrls = [
-        'assets/models/hospital (2).glb',
-        'assets/models/hospital-building-v2/hospital-building-v2.glb'
+        getAssetPath('assets/models/hospital (2).glb'),
+        getAssetPath('assets/models/hospital-building-v2/hospital-building-v2.glb')
       ];
       for (const url of preloadUrls) {
         try {
@@ -1558,7 +1575,7 @@ async function showProjectDiorama(project, modal) {
     let SimplifyModifier = null;
     // Use the user's canonical MediSync model only
     const MODEL_URLS = [
-      'assets/models/hospital (2).glb'
+      getAssetPath('assets/models/hospital (2).glb')
     ];
     try {
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -1580,7 +1597,7 @@ async function showProjectDiorama(project, modal) {
           loader.parse(window.__hospitalGLBBuffer, '', resolve, reject);
         });
         loadedFromPreload = true;
-        loadedModelUrl = window.__hospitalGLBUrl || 'assets/models/hospital (2).glb';
+        loadedModelUrl = window.__hospitalGLBUrl || getAssetPath('assets/models/hospital (2).glb');
         console.log('[diorama] parsed preloaded hospital.glb', gltf);
       } catch (e) {
         console.warn('[diorama] parse of preloaded buffer failed', e);
@@ -2088,7 +2105,8 @@ function startPortfolioRoom() {
       scene.add(monitorGlow);
 
       setStatus("Loading gaming room...");
-      const gltf = await new GLTFLoader().loadAsync("assets/models/gaming_room%20(1).glb");
+      const gameRoomUrl = getAssetPath("assets/models/gaming_room%20(1).glb");
+      const gltf = await new GLTFLoader().loadAsync(gameRoomUrl);
       const model = gltf.scene || gltf.scenes?.[0];
       model.traverse((node) => {
         if (!node.isMesh) return;
